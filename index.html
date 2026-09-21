@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f0e8" />
+    <title>Она — персональный флорист</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <button class="icon-button hidden" id="backButton" aria-label="Назад">←</button>
+        <a class="brand" href="#" aria-label="На главную">она<span>цветы по человеку</span></a>
+        <button class="icon-button" id="restartButton" aria-label="Начать заново">↻</button>
+      </header>
+
+      <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+      <section class="screen active" id="introScreen">
+        <div class="intro-visual" aria-hidden="true">
+          <span class="petal petal-one"></span><span class="petal petal-two"></span>
+          <span class="petal petal-three"></span><span class="petal petal-four"></span>
+          <span class="intro-mark">она</span>
+        </div>
+        <p class="eyebrow">Не каталог. Личный флорист.</p>
+        <h1>Букет, который похож именно на неё</h1>
+        <p class="lead">Опиши человека и повод. За минуту предложим три живых букета из наличия.</p>
+        <button class="primary" data-next="occasionScreen">Подобрать букет <span>→</span></button>
+        <p class="microcopy">Без регистрации · займёт около минуты</p>
+      </section>
+
+      <section class="screen" id="occasionScreen">
+        <p class="step-label">01 / 04</p>
+        <h2>Что хочешь сказать букетом?</h2>
+        <p class="subhead">Повод задаёт настроение, но не ограничивает выбор.</p>
+        <div class="choice-grid" id="occasionChoices">
+          <button class="choice" data-value="без повода"><span>✨</span>Просто порадовать</button>
+          <button class="choice" data-value="день рождения"><span>🎂</span>День рождения</button>
+          <button class="choice" data-value="годовщина"><span>♥</span>Годовщина</button>
+          <button class="choice" data-value="первая встреча"><span>☕</span>Первое свидание</button>
+          <button class="choice" data-value="извинение"><span>🕊</span>Помириться</button>
+          <button class="choice" data-value="мама"><span>☀</span>Для мамы</button>
+        </div>
+        <button class="primary" data-next="descriptionScreen" disabled>Продолжить <span>→</span></button>
+      </section>
+
+      <section class="screen" id="descriptionScreen">
+        <p class="step-label">02 / 04</p>
+        <h2>Какая она?</h2>
+        <p class="subhead">Пиши как другу. Хватит пары деталей: стиль, характер, любимые цвета.</p>
+        <label class="text-card">
+          <span>Например</span>
+          <textarea id="description" maxlength="240" placeholder="Носит светлые вещи, любит минимализм и уют. Спокойная, но с характером..."></textarea>
+          <small><b id="charCount">0</b> / 240</small>
+        </label>
+        <div class="chips" id="descriptionChips">
+          <button data-value="нежная">нежная</button><button data-value="яркая">яркая</button>
+          <button data-value="минимализм">минимализм</button><button data-value="творческая">творческая</button>
+          <button data-value="классика">любит классику</button><button data-value="необычная">любит необычное</button>
+        </div>
+        <button class="primary" data-next="budgetScreen" disabled>Продолжить <span>→</span></button>
+      </section>
+
+      <section class="screen" id="budgetScreen">
+        <p class="step-label">03 / 04</p>
+        <h2>Какой бюджет комфортен?</h2>
+        <p class="subhead">Покажем варианты рядом с суммой. Финальная цена останется под контролем.</p>
+        <div class="budget-card">
+          <output id="budgetOutput">8 000 ₽</output>
+          <input id="budget" type="range" min="3000" max="15000" step="1000" value="8000" aria-label="Бюджет" />
+          <div><span>3 000 ₽</span><span>15 000 ₽</span></div>
+        </div>
+        <button class="primary" data-next="detailsScreen">Продолжить <span>→</span></button>
+      </section>
+
+      <section class="screen" id="detailsScreen">
+        <p class="step-label">04 / 04</p>
+        <h2>Последний штрих</h2>
+        <p class="subhead">Это поможет флористу сделать подбор точнее.</p>
+        <div class="field-stack">
+          <label>Как её зовут?<input id="recipientName" type="text" maxlength="40" placeholder="Полина" /></label>
+          <label>Есть цветы, которые точно не любит?<input id="avoid" type="text" maxlength="80" placeholder="Например, лилии" /></label>
+        </div>
+        <button class="primary" id="showResults">Показать подборку <span>✦</span></button>
+      </section>
+
+      <section class="screen results" id="resultsScreen">
+        <p class="eyebrow">Подборка готова</p>
+        <h2 id="resultsTitle">Три букета для неё</h2>
+        <p class="subhead" id="resultsReason"></p>
+        <div class="bouquet-list" id="bouquetList"></div>
+      </section>
+
+      <section class="screen" id="orderScreen">
+        <p class="eyebrow">Почти готово</p>
+        <h2>Сделаем подарок личным</h2>
+        <div id="selectedBouquet"></div>
+        <h3>Добавить к букету</h3>
+        <div class="addon-list" id="addonList">
+          <label><span><b>Открытка от флориста</b><small>Напишем твой текст от руки</small></span><em>+300 ₽</em><input type="checkbox" value="300" data-name="Открытка" /></label>
+          <label><span><b>Французские конфеты</b><small>Небольшая коробка, 9 штук</small></span><em>+900 ₽</em><input type="checkbox" value="900" data-name="Конфеты" /></label>
+          <label><span><b>Сделать букет XL</b><small>На 30% объёмнее</small></span><em>+1 500 ₽</em><input type="checkbox" value="1500" data-name="Размер XL" /></label>
+        </div>
+        <div class="total"><span>Итого</span><strong id="totalPrice">0 ₽</strong></div>
+        <button class="primary" id="orderButton">Оформить заказ <span>→</span></button>
+        <p class="microcopy">Демо: заявка не будет отправлена</p>
+      </section>
+
+      <section class="screen success" id="successScreen">
+        <div class="success-icon">✓</div>
+        <p class="eyebrow">Выбор сохранён</p>
+        <h2>Флорист всё проверит</h2>
+        <p class="lead">В рабочей версии здесь клиент оставит телефон, выберет доставку и оплатит заказ.</p>
+        <div class="success-summary" id="successSummary"></div>
+        <button class="secondary" id="againButton">Подобрать другой букет</button>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
