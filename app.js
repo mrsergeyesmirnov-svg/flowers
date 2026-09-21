@@ -1,4 +1,4 @@
-import { formatPrice, recommend } from "./recommender.js";
+import { availableBouquets, formatPrice, recommend } from "./recommender.js";
 
 const screens = [...document.querySelectorAll(".screen")];
 const backButton = document.querySelector("#backButton");
@@ -12,7 +12,18 @@ function showScreen(id, remember = true) {
   screens.forEach((screen) => screen.classList.toggle("active", screen.id === id));
   if (remember && history.at(-1) !== id) history.push(id);
   backButton.classList.toggle("hidden", id === "introScreen" || id === "successScreen");
-  const steps = { introScreen: 0, occasionScreen: 25, descriptionScreen: 50, budgetScreen: 75, detailsScreen: 100, resultsScreen: 100, orderScreen: 100, successScreen: 100 };
+  const steps = {
+    introScreen: 0,
+    occasionScreen: 25,
+    descriptionScreen: 50,
+    budgetScreen: 75,
+    detailsScreen: 100,
+    resultsScreen: 100,
+    catalogScreen: 100,
+    customScreen: 100,
+    orderScreen: 100,
+    successScreen: 100
+  };
   progressBar.style.width = `${steps[id]}%`;
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -36,6 +47,9 @@ function reset() {
   $("#charCount").textContent = "0";
   $("#recipientName").value = "";
   $("#avoid").value = "";
+  $("#customRequest").value = "";
+  $("#floristConsent").checked = false;
+  $("#customSubmit").disabled = true;
   document.querySelectorAll(".selected, input[type=checkbox]:checked").forEach((element) => {
     element.classList.remove("selected");
     if (element.matches("input")) element.checked = false;
@@ -80,18 +94,12 @@ $("#budget").addEventListener("input", (event) => {
   $("#budgetOutput").textContent = formatPrice(state.budget);
 });
 
-$("#showResults").addEventListener("click", () => {
-  state.recipientName = $("#recipientName").value.trim();
-  state.avoid = $("#avoid").value.trim();
-  const matches = recommend(state);
-  const name = state.recipientName ? `для ${state.recipientName}` : "для неё";
-  $("#resultsTitle").textContent = `Три букета ${name}`;
-  $("#resultsReason").textContent = `Учли повод, описание и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Исключим: ${state.avoid}.` : "."}`;
-  $("#bouquetList").innerHTML = matches.map((bouquet, index) => `
+function bouquetCard(bouquet, badge = "В наличии") {
+  return `
     <article class="bouquet-card">
       <div class="bouquet-image">
-        <img src="${bouquet.image}" alt="Букет «${bouquet.name}»" loading="lazy" />
-        <span class="bouquet-badge">${index === 0 ? "Лучшее совпадение" : index === 1 ? "Альтернатива" : "Смелее"}</span>
+        <img src="${bouquet.image}" alt="Букет «${bouquet.name}»: ${bouquet.flowers}" loading="lazy" />
+        <span class="bouquet-badge">${badge}</span>
       </div>
       <div class="bouquet-content">
         <div class="bouquet-heading"><h3>${bouquet.name}</h3><strong>${formatPrice(bouquet.price)}</strong></div>
@@ -99,14 +107,33 @@ $("#showResults").addEventListener("click", () => {
         <p class="bouquet-description">${bouquet.description}</p>
         <button class="primary choose-bouquet" data-id="${bouquet.id}">Выбрать этот <span>→</span></button>
       </div>
-    </article>`).join("");
+    </article>`;
+}
+
+$("#showResults").addEventListener("click", () => {
+  state.recipientName = $("#recipientName").value.trim();
+  state.avoid = $("#avoid").value.trim();
+  const matches = recommend(state);
+  const name = state.recipientName ? `для ${state.recipientName}` : "для неё";
+  $("#resultsTitle").textContent = `Три букета ${name}`;
+  $("#resultsReason").textContent = `Учли повод, описание и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Полностью исключили: ${state.avoid}.` : "."}`;
+  const badges = ["Лучшее совпадение", "Альтернатива", "Смелее"];
+  $("#bouquetList").innerHTML = matches.map((bouquet, index) => bouquetCard(bouquet, badges[index])).join("");
   showScreen("resultsScreen");
 });
 
-$("#bouquetList").addEventListener("click", (event) => {
-  const button = event.target.closest(".choose-bouquet");
-  if (!button) return;
-  state.selected = recommend(state).find((bouquet) => bouquet.id === button.dataset.id);
+$("#showCatalog").addEventListener("click", () => {
+  const catalog = availableBouquets(state);
+  $("#catalogReason").textContent = state.avoid
+    ? `Показываем ${catalog.length} вариантов. В составах нет: ${state.avoid}.`
+    : `Сейчас в наличии ${catalog.length} вариантов.`;
+  $("#catalogList").innerHTML = catalog.map((bouquet) => bouquetCard(bouquet)).join("");
+  showScreen("catalogScreen");
+});
+
+function selectBouquet(id) {
+  state.selected = availableBouquets(state).find((bouquet) => bouquet.id === id);
+  if (!state.selected) return;
   $("#selectedBouquet").innerHTML = `
     <div class="selected-mini">
       <img src="${state.selected.image}" alt="" />
@@ -115,6 +142,26 @@ $("#bouquetList").addEventListener("click", (event) => {
   document.querySelectorAll("#addonList input").forEach((input) => { input.checked = false; });
   updateTotal();
   showScreen("orderScreen");
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".choose-bouquet");
+  if (button) selectBouquet(button.dataset.id);
+});
+
+function syncCustomRequest() {
+  $("#customSubmit").disabled = $("#customRequest").value.trim().length < 5 || !$("#floristConsent").checked;
+}
+
+$("#customRequest").addEventListener("input", syncCustomRequest);
+$("#floristConsent").addEventListener("change", syncCustomRequest);
+$("#customSubmit").addEventListener("click", () => {
+  $("#successSummary").innerHTML = `
+    <div><span>Запрос</span><strong>Личный подбор</strong></div>
+    <p>${$("#customRequest").value.trim()}</p>`;
+  $("#successScreen h2").textContent = "Запрос готов для флориста";
+  $("#successScreen .lead").textContent = "В рабочей версии флорист сразу получит пожелания и сможет ответить клиенту в Telegram.";
+  showScreen("successScreen");
 });
 
 function updateTotal() {
@@ -127,6 +174,8 @@ function updateTotal() {
 $("#addonList").addEventListener("change", updateTotal);
 $("#orderButton").addEventListener("click", () => {
   const { addons, total } = updateTotal();
+  $("#successScreen h2").textContent = "Флорист всё проверит";
+  $("#successScreen .lead").textContent = "В рабочей версии здесь клиент оставит телефон, выберет доставку и оплатит заказ.";
   $("#successSummary").innerHTML = `
     <div><span>Букет</span><strong>${state.selected.name}</strong></div>
     ${addons.length ? `<div><span>Дополнения</span><strong>${addons.map((item) => item.dataset.name).join(", ")}</strong></div>` : ""}

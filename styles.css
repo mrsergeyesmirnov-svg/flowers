@@ -103,6 +103,16 @@ textarea::placeholder { color: #a8aca6; }
 .bouquet-description { margin: 0 0 17px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .bouquet-card .primary { min-height: 50px; }
 
+.own-choice { margin-top: 24px; padding: 22px; border: 1px solid var(--line); border-radius: 24px; background: rgba(255,255,255,.58); }
+.own-choice h3 { margin: 0 0 8px; font: 25px/1.2 "Prata", serif; }
+.own-choice > p:not(.eyebrow) { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.own-choice .secondary { margin-bottom: 10px; background: var(--paper); }
+.consent-card { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; margin: 14px 0 22px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); cursor: pointer; }
+.consent-card input { width: 21px; height: 21px; margin: 1px 0 0; accent-color: var(--green); }
+.consent-card b, .consent-card small { display: block; }
+.consent-card b { margin-bottom: 5px; font-size: 13px; }
+.consent-card small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+
 .selected-mini { display: grid; grid-template-columns: 90px 1fr; gap: 14px; margin: 24px 0; padding: 12px; border-radius: 20px; background: var(--paper); }
 .selected-mini img { width: 90px; height: 90px; border-radius: 14px; object-fit: cover; }
 .selected-mini h3 { margin: 8px 0 5px; }

@@ -91,6 +91,36 @@
         <h2 id="resultsTitle">Три букета для неё</h2>
         <p class="subhead" id="resultsReason"></p>
         <div class="bouquet-list" id="bouquetList"></div>
+        <div class="own-choice">
+          <p class="eyebrow">Не попали в точку?</p>
+          <h3>Можно выбрать по-своему</h3>
+          <p>Посмотри всё подходящее или опиши идею — флорист лично разберёт запрос.</p>
+          <button class="secondary" id="showCatalog">Весь ассортимент</button>
+          <button class="primary" data-next="customScreen">Личный подбор флориста <span>→</span></button>
+        </div>
+      </section>
+
+      <section class="screen results" id="catalogScreen">
+        <p class="eyebrow">Подходящий ассортимент</p>
+        <h2>Выбери глазами</h2>
+        <p class="subhead" id="catalogReason">Здесь только букеты без исключённых цветов.</p>
+        <div class="bouquet-list" id="catalogList"></div>
+      </section>
+
+      <section class="screen" id="customScreen">
+        <p class="eyebrow">Личный подбор</p>
+        <h2>Опиши свой букет</h2>
+        <p class="subhead">Можно назвать цветы, цвета, настроение или просто объяснить, какой эффект должен произвести подарок.</p>
+        <label class="text-card">
+          <span>Пожелания к составу</span>
+          <textarea id="customRequest" maxlength="500" placeholder="Например: без роз, хочется лёгкий бело-зелёный букет, не слишком круглый..."></textarea>
+        </label>
+        <label class="consent-card">
+          <input id="floristConsent" type="checkbox" />
+          <span><b>Согласен на связь с флористом</b><small>Флорист получит этот запрос и напишет мне в Telegram с личным разбором и вариантами.</small></span>
+        </label>
+        <button class="primary" id="customSubmit" disabled>Отправить флористу <span>→</span></button>
+        <p class="microcopy">Демо: запрос не будет отправлен</p>
       </section>
 
       <section class="screen" id="orderScreen">

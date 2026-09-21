@@ -5,7 +5,7 @@ export const bouquets = [
     flowers: "Ранункулюсы, эустома, эвкалипт",
     description: "Воздушный и тактичный — выглядит дорого, но не кричит о себе.",
     price: 5900,
-    image: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=85",
+    image: "https://unsplash.com/photos/Iginxta1uqs/download?force=true&w=900",
     tags: ["нежная", "спокойная", "минимализм", "светлый", "первая встреча", "без повода", "мама"]
   },
   {
@@ -41,8 +41,35 @@ export const bouquets = [
     flowers: "Каллы, антуриум, аспидистра",
     description: "Архитектурная форма и ничего лишнего. Для тех, кто выбирает вещи с характером.",
     price: 9900,
-    image: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=900&q=85",
+    image: "https://unsplash.com/photos/wzpCYipvHmM/download?force=true&w=900",
     tags: ["стильная", "деловая", "минимализм", "необычная", "современная", "годовщина", "коллега"]
+  },
+  {
+    id: "sunny",
+    name: "Солнечный день",
+    flowers: "Хризантемы, гипсофила, эвкалипт",
+    description: "Лёгкий и жизнерадостный букет с мягкой полевой фактурой.",
+    price: 4500,
+    image: "https://unsplash.com/photos/hcH4yj7atVM/download?force=true&w=900",
+    tags: ["весёлая", "тёплая", "естественная", "забота", "мама", "без повода", "жёлтый"]
+  },
+  {
+    id: "meadow",
+    name: "Летний луг",
+    flowers: "Ромашки, сезонные полевые цветы, зелень",
+    description: "Нарочито свободная сборка для тех, кто любит простоту и живые детали.",
+    price: 3900,
+    image: "https://unsplash.com/photos/zjZkslZn9V8/download?force=true&w=900",
+    tags: ["творческая", "естественная", "уют", "природа", "без повода", "первая встреча", "светлый"]
+  },
+  {
+    id: "white",
+    name: "Белый штрих",
+    flowers: "Белые хризантемы, маттиола, сезонная зелень",
+    description: "Спокойная светлая композиция — аккуратная, свежая и универсальная.",
+    price: 5200,
+    image: "https://unsplash.com/photos/cDihILxrdYw/download?force=true&w=900",
+    tags: ["нежная", "спокойная", "минимализм", "светлый", "мама", "коллега", "извинение"]
   },
   {
     id: "rose",
@@ -50,14 +77,36 @@ export const bouquets = [
     flowers: "Красные розы, сезонная зелень",
     description: "Уверенная классика без лишних объяснений — для большого романтического жеста.",
     price: 11900,
-    image: "https://images.unsplash.com/photo-1548094967-e25a127d1f6d?auto=format&fit=crop&w=900&q=85",
+    image: "https://unsplash.com/photos/N-SDwTIagr4/download?force=true&w=900",
     tags: ["романтичная", "классика", "любовь", "годовщина", "предложение", "красный"]
   }
 ];
 
-export function recommend({ description = "", occasion = "", budget = 8000 }) {
-  const words = `${description} ${occasion}`.toLowerCase();
-  return bouquets
+const flowerRoots = [
+  "роз", "лили", "пион", "хризантем", "гортенз", "эустом", "ранункул",
+  "тюльпан", "гвоздик", "диантус", "калл", "антуриум", "ромаш",
+  "маттиол", "эвкалипт", "гипсофил", "хамелациум"
+];
+
+const normalize = (value = "") => value.toLocaleLowerCase("ru-RU").replaceAll("ё", "е");
+
+export function excludedFlowerRoots(avoid = "") {
+  const words = normalize(avoid);
+  return flowerRoots.filter((root) => words.includes(root));
+}
+
+export function availableBouquets({ avoid = "" } = {}) {
+  const excluded = excludedFlowerRoots(avoid);
+  if (!excluded.length) return bouquets;
+  return bouquets.filter((bouquet) => {
+    const composition = normalize(bouquet.flowers);
+    return excluded.every((root) => !composition.includes(root));
+  });
+}
+
+export function recommend({ description = "", occasion = "", budget = 8000, avoid = "" }) {
+  const words = normalize(`${description} ${occasion}`);
+  return availableBouquets({ avoid })
     .map((bouquet) => ({
       ...bouquet,
       score:
