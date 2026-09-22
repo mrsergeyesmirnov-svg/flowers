@@ -26,12 +26,11 @@ npm test
 SUPERADMIN_TELEGRAM_ID=ваш_telegram_id
 SHOP_ADMIN_TELEGRAM_IDS=id_владельца,id_менеджера
 SHOP_ID=romashka
-PRIVACY_OPERATOR=ИП Иванова Анна Сергеевна
-PRIVACY_INN=000000000000
-PRIVACY_OGRN=000000000000000
-PRIVACY_ADDRESS=г. Санкт-Петербург, ...
-PRIVACY_EMAIL=privacy@example.ru
-PRIVACY_PHONE=+7 ...
+PRIVACY_OPERATOR=Индивидуальный предприниматель Смирнов Сергей Евгеньевич
+PRIVACY_INN=784815635497
+PRIVACY_OGRN=326784700194735
+PRIVACY_ADDRESS=196240, Россия, г. Санкт-Петербург, ул. Варшавская, д. 69, корп. 3, литера А, кв. 30
+PRIVACY_CONTACT=Telegram: @yank0vski
 PRIVACY_RKN_ID=номер записи в реестре операторов
 PRIVACY_HOSTING_LOCATION=Российская Федерация, город и провайдер
 SHOP_OPERATOR=ИП и наименование магазина

@@ -17,6 +17,13 @@ const webAppUrl = process.env.WEBAPP_URL || process.env.PUBLIC_URL ||
 const contacts = process.env.FLOWER_CONTACTS || "Связаться с флористом: @flowers_manager\nТелефон: +7 (999) 000-00-00";
 const addresses = process.env.FLOWER_ADDRESSES || "Наш адрес: Санкт-Петербург, адрес цветочного будет добавлен перед запуском.";
 const about = process.env.FLOWER_ABOUT || "Мы собираем букеты под конкретного человека, а не просто продаём готовые композиции. Опиши получателя — флорист предложит три подходящих варианта.";
+const privacyDefaults = {
+  operator: "Индивидуальный предприниматель Смирнов Сергей Евгеньевич",
+  inn: "784815635497",
+  ogrn: "326784700194735",
+  address: "196240, Россия, г. Санкт-Петербург, ул. Варшавская, д. 69, корп. 3, литера А, кв. 30",
+  contact: "Telegram: @yank0vski"
+};
 const privacyTemplate = readFileSync(join(root, "privacy.html"), "utf8");
 const databaseReady = ensureDatabase().catch((error) => {
   console.error("Database initialization failed:", error.message);
@@ -177,12 +184,11 @@ createServer(async (request, response) => {
   if (path === "/privacy" || path === "/privacy.html") {
     const policy = privacyTemplate
       .replaceAll("{{POLICY_VERSION}}", "22 сентября 2026 года")
-      .replaceAll("{{PRIVACY_OPERATOR}}", escapeHtml(process.env.PRIVACY_OPERATOR || "РЕКВИЗИТЫ ОПЕРАТОРА НЕ ЗАПОЛНЕНЫ"))
-      .replaceAll("{{PRIVACY_INN}}", escapeHtml(process.env.PRIVACY_INN || "не указан"))
-      .replaceAll("{{PRIVACY_OGRN}}", escapeHtml(process.env.PRIVACY_OGRN || "не указан"))
-      .replaceAll("{{PRIVACY_ADDRESS}}", escapeHtml(process.env.PRIVACY_ADDRESS || "не указан"))
-      .replaceAll("{{PRIVACY_EMAIL}}", escapeHtml(process.env.PRIVACY_EMAIL || "privacy@example.invalid"))
-      .replaceAll("{{PRIVACY_PHONE}}", escapeHtml(process.env.PRIVACY_PHONE ? ` · ${process.env.PRIVACY_PHONE}` : ""))
+      .replaceAll("{{PRIVACY_OPERATOR}}", escapeHtml(process.env.PRIVACY_OPERATOR || privacyDefaults.operator))
+      .replaceAll("{{PRIVACY_INN}}", escapeHtml(process.env.PRIVACY_INN || privacyDefaults.inn))
+      .replaceAll("{{PRIVACY_OGRN}}", escapeHtml(process.env.PRIVACY_OGRN || privacyDefaults.ogrn))
+      .replaceAll("{{PRIVACY_ADDRESS}}", escapeHtml(process.env.PRIVACY_ADDRESS || privacyDefaults.address))
+      .replaceAll("{{PRIVACY_CONTACT}}", escapeHtml(process.env.PRIVACY_CONTACT || privacyDefaults.contact))
       .replaceAll("{{PRIVACY_RKN_ID}}", escapeHtml(process.env.PRIVACY_RKN_ID || "не указана"))
       .replaceAll("{{SHOP_OPERATOR}}", escapeHtml(process.env.SHOP_OPERATOR || process.env.SHOP_NAME || "РЕКВИЗИТЫ МАГАЗИНА НЕ ЗАПОЛНЕНЫ"))
       .replaceAll("{{HOSTING_LOCATION}}", escapeHtml(process.env.PRIVACY_HOSTING_LOCATION || "РЕГИОН БАЗЫ ДАННЫХ НЕ УКАЗАН"));

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { availableBouquets, recommend } from "./recommender.js";
 import { adminSummary, readShops } from "./admin-data.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
@@ -38,6 +39,14 @@ test("подбор использует ассортимент магазина 
 test("тип получателя влияет на подбор", () => {
   assert.equal(recommend({ recipientType: "коллега", budget: 10000 })[0].id, "mono");
   assert.ok(recommend({ recipientType: "учитель", budget: 5000 }).slice(0, 3).some((bouquet) => bouquet.tags.includes("учитель")));
+});
+
+test("учителю не предлагается романтический повод", () => {
+  const app = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  const teacherOptions = app.match(/"учитель": \[(.*?)\],\n  "школа"/s)?.[1] || "";
+  assert.ok(teacherOptions.includes("день учителя"));
+  assert.ok(!teacherOptions.includes("первая встреча"));
+  assert.ok(!teacherOptions.includes("годовщина"));
 });
 
 test("суперадмин считает только активную подписку в MRR", () => {
