@@ -164,11 +164,29 @@ function showBouquetDialog(item = null, kind = "bouquet") {
   for (const key of ["name","flowers","description","price","image"]) form.elements[key].value = item?.[key] ?? "";
   form.elements.tags.value = (item?.tags || []).join(", ");
   form.elements.available.checked = item?.available !== false;
+  $("#bouquetImageFile").value = "";
+  $("#bouquetImagePreview").src = item?.image || "";
+  $("#bouquetImagePreview").hidden = !item?.image;
   const addon = kind === "addon";
   $("#bouquetDialogTitle").textContent = item ? `Изменить ${addon ? "позицию" : "букет"}` : `Новый ${addon ? "товар" : "букет"}`;
   $("#bouquetCompositionLabel").textContent = addon ? "Описание позиции" : "Состав";
   $("#bouquetTagsLabel").hidden = addon;
   $("#bouquetDialog").showModal();
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Не удалось прочитать фотографию"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImage(file) {
+  if (file.size > 4 * 1024 * 1024) throw new Error("Фотография должна быть не больше 4 МБ");
+  const dataUrl = await fileToDataUrl(file);
+  return api(`/api/admin/shops/${encodeURIComponent(state.current.id)}/media`, { method:"POST", body:JSON.stringify({ dataUrl }) });
 }
 
 async function load() {
@@ -208,6 +226,19 @@ $("#addShopButton").addEventListener("click", () => $("#shopDialog").showModal()
 $("#addBouquetButton").addEventListener("click", () => showBouquetDialog(null, "bouquet"));
 $("#addAddonButton").addEventListener("click", () => showBouquetDialog(null, "addon"));
 $("#addStaffButton").addEventListener("click", () => { $("#staffForm").reset(); $("#staffDialog").showModal(); });
+$("#bouquetImageFile").addEventListener("change", async (event) => {
+  const [file] = event.target.files;
+  if (!file) return;
+  $("#bouquetImagePreview").src = URL.createObjectURL(file);
+  $("#bouquetImagePreview").hidden = false;
+});
+$("#openMailingChat").addEventListener("click", () => {
+  const username = String(state.current.bot || "").replace(/^@/, "");
+  if (!username) return toast("Сначала укажите @бот магазина");
+  const url = `https://t.me/${username}?start=mailing`;
+  if (telegram?.openTelegramLink) telegram.openTelegramLink(url);
+  else location.href = url;
+});
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
 document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
 $("#orderFilters").addEventListener("click", (event) => { const button = event.target.closest("button"); if (!button) return; state.orderFilter = button.dataset.status; $("#orderFilters .active")?.classList.remove("active"); button.classList.add("active"); renderOrders(); });
@@ -233,13 +264,14 @@ $("#toggleShopButton").addEventListener("click", async () => {
 
 $("#bouquetForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  try { const form = event.currentTarget; const id = form.elements.id.value; const payload = Object.fromEntries(new FormData(form)); payload.price = Number(payload.price); payload.available = form.elements.available.checked; const path = `/api/admin/shops/${encodeURIComponent(state.current.id)}/catalog${id ? `/${encodeURIComponent(id)}` : ""}`; await api(path, { method:id ? "PATCH" : "POST", body:JSON.stringify(payload) }); $("#bouquetDialog").close(); const { catalog } = await api(`/api/admin/shops/${encodeURIComponent(state.current.id)}/catalog`); state.catalog = catalog; renderCatalog("bouquet"); renderCatalog("addon"); toast("Ассортимент обновлён"); } catch (error) { toast(error.message); }
+  const form = event.currentTarget;
+  const submit = form.querySelector('[type="submit"]');
+  submit.disabled = true;
+  try { const id = form.elements.id.value; const payload = Object.fromEntries(new FormData(form)); const [file] = $("#bouquetImageFile").files; if (file) payload.image = (await uploadImage(file)).url; payload.price = Number(payload.price); payload.available = form.elements.available.checked; const path = `/api/admin/shops/${encodeURIComponent(state.current.id)}/catalog${id ? `/${encodeURIComponent(id)}` : ""}`; await api(path, { method:id ? "PATCH" : "POST", body:JSON.stringify(payload) }); $("#bouquetDialog").close(); const { catalog } = await api(`/api/admin/shops/${encodeURIComponent(state.current.id)}/catalog`); state.catalog = catalog; renderCatalog("bouquet"); renderCatalog("addon"); toast("Ассортимент обновлён"); } catch (error) { toast(error.message); }
+  finally { submit.disabled = false; }
 });
 
 $("#staffForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   try { const payload = Object.fromEntries(new FormData(event.currentTarget)); const { staff } = await api(`/api/admin/shops/${encodeURIComponent(state.current.id)}/staff`, { method:"POST", body:JSON.stringify(payload) }); state.staff.push(staff); renderStaff(); $("#staffDialog").close(); toast("Сотрудник добавлен"); } catch (error) { toast(error.message); }
 });
-
-$("#mailingForm textarea").addEventListener("input", (event) => { $("#mailingPreview").textContent = event.target.value || "Предпросмотр сообщения"; });
-$("#mailingForm").addEventListener("submit", (event) => { event.preventDefault(); toast("Нет получателей с рекламным согласием"); });

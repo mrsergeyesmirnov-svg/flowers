@@ -69,6 +69,13 @@ export async function ensureDatabase() {
       updated_at timestamptz NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS shop_orders_shop_id_idx ON shop_orders(shop_id);
+    CREATE TABLE IF NOT EXISTS shop_media (
+      id text PRIMARY KEY,
+      shop_id text NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+      mime_type text NOT NULL,
+      content bytea NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS contact_phone text NOT NULL DEFAULT '';
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS contact_telegram text NOT NULL DEFAULT '';
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS address text NOT NULL DEFAULT '';
@@ -79,6 +86,9 @@ export async function ensureDatabase() {
     ALTER TABLE bouquets ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'bouquet';
     ALTER TABLE shop_staff ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'florist';
     ALTER TABLE shop_staff ADD COLUMN IF NOT EXISTS telegram_user_id text;
+    DELETE FROM bouquets a USING bouquets b
+      WHERE a.shop_id=b.shop_id AND a.kind=b.kind AND lower(a.name)=lower(b.name) AND a.id>b.id;
+    CREATE UNIQUE INDEX IF NOT EXISTS bouquets_unique_name_idx ON bouquets(shop_id, kind, lower(name));
   `);
 
   const shopId = process.env.SHOP_ID;
@@ -180,7 +190,11 @@ export async function createBouquet(shopId, bouquet) {
   const id = bouquet.id || randomUUID();
   const { rows } = await pool.query(
     `INSERT INTO bouquets (id, shop_id, name, flowers, description, price, image, tags, available, kind)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10) RETURNING *`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10)
+     ON CONFLICT (shop_id, kind, (lower(name))) DO UPDATE SET
+       flowers=EXCLUDED.flowers, description=EXCLUDED.description, price=EXCLUDED.price,
+       image=EXCLUDED.image, tags=EXCLUDED.tags, available=EXCLUDED.available, updated_at=now()
+     RETURNING *`,
     [id, shopId, bouquet.name, bouquet.flowers, bouquet.description || "", bouquet.price, bouquet.image || "", JSON.stringify(bouquet.tags || []), bouquet.available !== false, bouquet.kind || "bouquet"]
   );
   return mapBouquet(rows[0]);
@@ -245,6 +259,18 @@ export async function updateOrder(shopId, id, input) {
      WHERE shop_id=$1 AND id=$2 RETURNING *`,
     [shopId, id, input.status, floristId]
   );
+  return rows[0] || null;
+}
+
+export async function saveMedia(shopId, mimeType, content) {
+  const id = randomUUID();
+  await pool.query("INSERT INTO shop_media (id, shop_id, mime_type, content) VALUES ($1,$2,$3,$4)", [id, shopId, mimeType, content]);
+  return id;
+}
+
+export async function getMedia(id) {
+  if (!pool) return null;
+  const { rows } = await pool.query("SELECT mime_type, content FROM shop_media WHERE id=$1", [id]);
   return rows[0] || null;
 }
 

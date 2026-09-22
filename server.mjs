@@ -5,9 +5,9 @@ import { adminSummary, findShopByBot, readShops } from "./admin-data.js";
 import { bouquets as demoBouquets } from "./recommender.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
 import {
-  createBouquet, createShop, createStaff, databaseEnabled, ensureDatabase, getShop,
+  createBouquet, createShop, createStaff, databaseEnabled, ensureDatabase, getMedia, getShop,
   listCatalog, listOrders, listShops, listStaff, updateBouquet, updateOrder, updateShop,
-  updateShopProfile, updateStaff
+  updateShopProfile, updateStaff, saveMedia
 } from "./database.mjs";
 
 const root = resolve(import.meta.dirname);
@@ -58,11 +58,11 @@ function json(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
-async function readJson(request) {
+async function readJson(request, maxBytes = 64_000) {
   let body = "";
   for await (const chunk of request) {
     body += chunk;
-    if (body.length > 64_000) throw Object.assign(new Error("Слишком большой запрос"), { status: 413 });
+    if (body.length > maxBytes) throw Object.assign(new Error("Слишком большой запрос"), { status: 413 });
   }
   try { return JSON.parse(body || "{}"); }
   catch { throw Object.assign(new Error("Некорректный JSON"), { status: 400 }); }
@@ -125,6 +125,20 @@ function validateStaff(input) {
     name: String(input.name).trim().slice(0, 120), phone: String(input.phone).trim().slice(0, 24),
     role: roles.has(input.role) ? input.role : "florist"
   };
+}
+
+function validateImage(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) throw Object.assign(new Error("Поддерживаются JPG, PNG и WebP"), { status: 400 });
+  const content = Buffer.from(match[2], "base64");
+  if (!content.length || content.length > 4 * 1024 * 1024) throw Object.assign(new Error("Фотография должна быть не больше 4 МБ"), { status: 413 });
+  const validSignature = match[1] === "image/jpeg"
+    ? content.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+    : match[1] === "image/png"
+      ? content.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+      : content.subarray(0, 4).toString() === "RIFF" && content.subarray(8, 12).toString() === "WEBP";
+  if (!validSignature) throw Object.assign(new Error("Файл не является корректным изображением"), { status: 400 });
+  return { mimeType: match[1], content };
 }
 
 async function canAccessShop(access, shopId) {
@@ -194,6 +208,15 @@ createServer(async (request, response) => {
         if (access.role !== "superadmin") return json(response, 403, { error: "Только Super Admin" });
         const shop = await createShop(validateShop(await readJson(request)));
         return json(response, 201, { shop });
+      }
+
+      const mediaMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/media$/);
+      if (mediaMatch && request.method === "POST") {
+        const shopId = decodeURIComponent(mediaMatch[1]);
+        if (!await canAccessShop(access, shopId)) return json(response, 403, { error: "Чужой магазин" });
+        const { mimeType, content } = validateImage((await readJson(request, 6_000_000)).dataUrl);
+        const id = await saveMedia(shopId, mimeType, content);
+        return json(response, 201, { url: `/media/${id}` });
       }
 
       const profileMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/profile$/);
@@ -273,6 +296,17 @@ createServer(async (request, response) => {
     }
   }
 
+  const mediaMatch = path.match(/^\/media\/([a-f0-9-]{36})$/);
+  if (mediaMatch && request.method === "GET") {
+    try {
+      const media = databaseEnabled ? await getMedia(mediaMatch[1]) : null;
+      if (!media) return response.writeHead(404).end("Not found");
+      response.writeHead(200, { "Content-Type": media.mime_type, "Content-Length": media.content.length, "Cache-Control": "public, max-age=31536000, immutable" });
+      response.end(media.content);
+    } catch { response.writeHead(404).end("Not found"); }
+    return;
+  }
+
   if (!['GET', 'HEAD'].includes(request.method)) {
     response.writeHead(405, { Allow: "GET, HEAD" }).end("Method not allowed");
     return;
@@ -318,6 +352,14 @@ async function telegram(method, body = {}) {
   return result.result;
 }
 
+const mailingDrafts = new Map();
+const isBotAdmin = (userId) => {
+  const id = String(userId || "");
+  const superAdmin = id && id === String(process.env.SUPERADMIN_TELEGRAM_ID || "").trim();
+  const shopAdmins = new Set(String(process.env.SHOP_ADMIN_TELEGRAM_IDS || "").split(",").map((value) => value.trim()).filter(Boolean));
+  return superAdmin || shopAdmins.has(id);
+};
+
 async function startBot() {
   if (!botToken) {
     console.log("TELEGRAM_BOT_TOKEN is not set; web app only");
@@ -334,8 +376,21 @@ async function startBot() {
       for (const update of updates) {
         offset = update.update_id + 1;
         const message = update.message;
+        const senderId = String(message?.from?.id || "");
         if (message?.text === "/myid") {
           await telegram("sendMessage", { chat_id: message.chat.id, text: `Ваш Telegram ID: ${message.from.id}\nОн нужен только для настройки доступа в Railway Variables.` });
+          continue;
+        }
+        if ((message?.text === "/start mailing" || message?.text === "/mailing" || message?.text === "/рассылка") && isBotAdmin(senderId)) {
+          mailingDrafts.set(senderId, { awaiting: true });
+          await telegram("sendMessage", { chat_id: message.chat.id, text: "Пришлите одним сообщением текст рассылки или фотографию с подписью. Затем я покажу предпросмотр перед отправкой." });
+          continue;
+        }
+        if (mailingDrafts.get(senderId)?.awaiting && (message?.text || message?.photo)) {
+          const keyboard = { inline_keyboard: [[{ text: "Отправить", callback_data: "mailing_send" }, { text: "Отменить", callback_data: "mailing_cancel" }]] };
+          mailingDrafts.set(senderId, { awaiting: false, text: message.caption || message.text || "", photo: message.photo?.at(-1)?.file_id || "" });
+          if (message.photo) await telegram("sendPhoto", { chat_id: message.chat.id, photo: message.photo.at(-1).file_id, caption: `Предпросмотр рассылки\n\n${message.caption || ""}`, reply_markup: keyboard });
+          else await telegram("sendMessage", { chat_id: message.chat.id, text: `Предпросмотр рассылки\n\n${message.text}`, reply_markup: keyboard });
           continue;
         }
         if (message?.text?.startsWith("/start")) {
@@ -358,9 +413,8 @@ async function startBot() {
           const privacyButton = webAppUrl
             ? { text: "🔒 Конфиденциальность", url: `${webAppUrl.replace(/\/$/, "")}/privacy` }
             : { text: "🔒 Конфиденциальность", callback_data: "privacy" };
-          const senderId = String(message.from?.id || "");
           const superAdmin = senderId && senderId === String(process.env.SUPERADMIN_TELEGRAM_ID || "").trim();
-          const shopAdmin = senderId && new Set(String(process.env.SHOP_ADMIN_TELEGRAM_IDS || "").split(",").map((id) => id.trim()).filter(Boolean)).has(senderId);
+          const shopAdmin = isBotAdmin(senderId) && !superAdmin;
           const adminRow = webAppUrl && (superAdmin || shopAdmin)
             ? [[{ text: superAdmin ? "⚙️ Super Admin" : "⚙️ Админ магазина", web_app: { url: `${webAppUrl.replace(/\/$/, "")}/admin` } }]]
             : [];
@@ -390,6 +444,18 @@ async function startBot() {
 
         const callback = update.callback_query;
         if (!callback) continue;
+        const callbackSenderId = String(callback.from?.id || "");
+        if (callback.data === "mailing_cancel" && isBotAdmin(callbackSenderId)) {
+          mailingDrafts.delete(callbackSenderId);
+          await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Рассылка отменена" });
+          await telegram("sendMessage", { chat_id: callback.message.chat.id, text: "Черновик рассылки удалён." });
+          continue;
+        }
+        if (callback.data === "mailing_send" && isBotAdmin(callbackSenderId)) {
+          await telegram("answerCallbackQuery", { callback_query_id: callback.id });
+          await telegram("sendMessage", { chat_id: callback.message.chat.id, text: "Сейчас получателей с отдельным согласием на рекламу: 0. Сообщение никому не отправлено. Когда появятся согласившиеся клиенты, здесь будет указано точное число до подтверждения." });
+          continue;
+        }
         let shopProfile = null;
         if (databaseEnabled && process.env.SHOP_ID) {
           try { await databaseReady; shopProfile = await getShop(process.env.SHOP_ID); } catch { /* Используем значения окружения. */ }

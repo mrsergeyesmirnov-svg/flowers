@@ -71,6 +71,15 @@ test("кабинет магазина содержит шесть рабочих
   }
 });
 
+test("допродажи защищены от дублей, а фотографии загружаются файлом", () => {
+  const database = readFileSync(new URL("./database.mjs", import.meta.url), "utf8");
+  const admin = readFileSync(new URL("./admin.html", import.meta.url), "utf8");
+  assert.ok(database.includes("bouquets_unique_name_idx"));
+  assert.ok(database.includes("ON CONFLICT (shop_id, kind, (lower(name)))"));
+  assert.ok(admin.includes('type="file" accept="image/jpeg,image/png,image/webp"'));
+  assert.ok(!admin.includes("Ссылка на фотографию"));
+});
+
 test("админ определяется только по подписанным Telegram initData", () => {
   const token = "test-token";
   const now = 1_800_000_000;

@@ -98,15 +98,14 @@
         </section>
 
         <section class="shop-section" data-section="mailings">
-          <form class="panel" id="mailingForm">
-            <h3>Новая рассылка</h3>
+          <div class="panel">
+            <h3>Рассылки</h3>
             <p class="panel-note">Получателей с отдельным согласием на рекламу: <strong id="mailingRecipients">0</strong>. Без согласия сообщение не отправится.</p>
             <div class="mailing-stats"><span>Отправлено <b>0</b></span><span>Ошибки <b>0</b></span><span>Отписались <b>0</b></span></div>
             <label>Магазин-отправитель<input id="mailingSender" readonly /></label>
-            <label>Текст сообщения<textarea name="message" maxlength="1000" placeholder="Напишите акцию или новость магазина"></textarea></label>
-            <div class="mailing-preview" id="mailingPreview">Предпросмотр сообщения</div>
-            <button class="primary" type="submit" disabled>Отправить рассылку</button>
-          </form>
+            <p class="panel-note">Текст и фотографию удобнее отправить прямо в чат с ботом. Бот покажет предпросмотр и попросит подтвердить отправку.</p>
+            <button class="primary" type="button" id="openMailingChat">Создать рассылку в чате</button>
+          </div>
         </section>
       </section>
 
@@ -136,7 +135,9 @@
         <label>Описание<textarea name="description" maxlength="500"></textarea></label>
         <label id="bouquetTagsLabel">Кому и к каким поводам подходит<input name="tags" maxlength="500" placeholder="мама, учитель, день рождения, благодарность" /></label>
         <label>Цена<input name="price" type="number" min="0" step="100" required /></label>
-        <label>Ссылка на фотографию<input name="image" type="url" maxlength="1000" /></label>
+        <input name="image" type="hidden" />
+        <label>Фотография<input id="bouquetImageFile" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+        <img class="upload-preview" id="bouquetImagePreview" alt="Предпросмотр фотографии" hidden />
         <label class="check"><input name="available" type="checkbox" checked /> В наличии</label>
         <button class="primary" type="submit">Сохранить букет</button>
       </form>
