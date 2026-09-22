@@ -129,6 +129,10 @@ async function startBot() {
       for (const update of updates) {
         offset = update.update_id + 1;
         const message = update.message;
+        if (message?.text === "/myid") {
+          await telegram("sendMessage", { chat_id: message.chat.id, text: `Ваш Telegram ID: ${message.from.id}\nОн нужен только для настройки доступа в Railway Variables.` });
+          continue;
+        }
         if (message?.text?.startsWith("/start")) {
           const pickButton = webAppUrl
             ? { text: "🌷 Подобрать букет", web_app: { url: webAppUrl } }
