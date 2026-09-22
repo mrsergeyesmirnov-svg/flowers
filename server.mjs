@@ -1,12 +1,13 @@
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, resolve } from "node:path";
-import { adminSummary, readShops } from "./admin-data.js";
+import { adminSummary, findShopByBot, readShops } from "./admin-data.js";
 import { bouquets as demoBouquets } from "./recommender.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
 import {
-  createBouquet, createShop, databaseEnabled, ensureDatabase, getShop,
-  listCatalog, listShops, updateBouquet, updateShop
+  createBouquet, createShop, createStaff, databaseEnabled, ensureDatabase, getShop,
+  listCatalog, listOrders, listShops, listStaff, updateBouquet, updateOrder, updateShop,
+  updateShopProfile, updateStaff
 } from "./database.mjs";
 
 const root = resolve(import.meta.dirname);
@@ -29,6 +30,7 @@ const databaseReady = ensureDatabase().catch((error) => {
   console.error("Database initialization failed:", error.message);
   throw error;
 });
+let botUsernamePromise;
 const types = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -96,20 +98,72 @@ function validateBouquet(input) {
   return {
     name: String(input.name).trim().slice(0, 120), flowers: String(input.flowers).trim().slice(0, 300),
     description: String(input.description || "").trim().slice(0, 500), price,
-    image: String(input.image || "").trim().slice(0, 1000), available: input.available !== false
+    image: String(input.image || "").trim().slice(0, 1000), available: input.available !== false,
+    kind: input.kind === "addon" ? "addon" : "bouquet",
+    tags: (Array.isArray(input.tags) ? input.tags : String(input.tags || "").split(","))
+      .map((tag) => String(tag).trim().toLowerCase().slice(0, 50)).filter(Boolean).slice(0, 20)
   };
+}
+
+function validateProfile(input) {
+  return {
+    contactPhone: String(input.contactPhone || "").trim().slice(0, 40),
+    contactTelegram: String(input.contactTelegram || "").trim().slice(0, 80),
+    address: String(input.address || "").trim().slice(0, 300),
+    about: String(input.about || "").trim().slice(0, 1000),
+    mapUrl: String(input.mapUrl || "").trim().slice(0, 1000),
+    schedule: String(input.schedule || "").trim().slice(0, 200),
+    pickup: String(input.pickup || "").trim().slice(0, 300)
+  };
+}
+
+function validateStaff(input) {
+  const roles = new Set(["owner", "manager", "florist"]);
+  if (!String(input.name || "").trim()) throw Object.assign(new Error("Укажите имя сотрудника"), { status: 400 });
+  if (!/^\+?[0-9 ()-]{7,20}$/.test(String(input.phone || "").trim())) throw Object.assign(new Error("Проверьте номер телефона"), { status: 400 });
+  return {
+    name: String(input.name).trim().slice(0, 120), phone: String(input.phone).trim().slice(0, 24),
+    role: roles.has(input.role) ? input.role : "florist"
+  };
+}
+
+async function canAccessShop(access, shopId) {
+  return access.role === "superadmin" || await resolveShopId(access) === shopId;
 }
 
 async function shopsFor(access) {
   if (databaseEnabled) {
     await databaseReady;
     const shops = await listShops();
-    return access.role === "shop_admin" ? shops.filter((shop) => shop.id === access.shopId) : shops;
+    if (access.role !== "shop_admin") return shops;
+    access.shopId = await resolveShopId(access, shops);
+    return shops.filter((shop) => shop.id === access.shopId);
   }
   const shops = readShops(process.env.ADMIN_SHOPS_JSON, {
     id: process.env.SHOP_ID, name: process.env.SHOP_NAME, bot: process.env.BOT_USERNAME, botOnline: Boolean(botToken)
   });
   return access.role === "shop_admin" ? shops.filter((shop) => shop.id === access.shopId) : shops;
+}
+
+const normalizeBotUsername = (value) => String(value || "").trim().replace(/^@/, "").toLowerCase();
+
+async function currentBotUsername() {
+  if (!botToken) return normalizeBotUsername(process.env.BOT_USERNAME);
+  botUsernamePromise ||= telegram("getMe")
+    .then((bot) => normalizeBotUsername(bot.username))
+    .catch(() => normalizeBotUsername(process.env.BOT_USERNAME));
+  return botUsernamePromise;
+}
+
+async function resolveShopId(access, shops = null) {
+  if (access.role !== "shop_admin") return "";
+  if (!databaseEnabled) return access.shopId;
+  await databaseReady;
+  const availableShops = shops || await listShops();
+  if (access.shopId && availableShops.some((shop) => shop.id === access.shopId)) return access.shopId;
+  const username = await currentBotUsername();
+  if (!username) return "";
+  return findShopByBot(availableShops, username)?.id || "";
 }
 
 createServer(async (request, response) => {
@@ -126,7 +180,12 @@ createServer(async (request, response) => {
 
       if (path === "/api/admin" && request.method === "GET") {
         const shops = await shopsFor(access);
-        return json(response, 200, { role: access.role, database: databaseEnabled, summary: adminSummary(shops), shops });
+        return json(response, 200, {
+          role: access.role, database: databaseEnabled, summary: adminSummary(shops), shops,
+          shopBindingError: access.role === "shop_admin" && !shops.length
+            ? "Магазин не привязан. Укажите правильный SHOP_ID в Railway или тот же @бот в карточке магазина."
+            : ""
+        });
       }
       if (!databaseEnabled) return json(response, 503, { error: "Подключите Postgres в Railway" });
       await databaseReady;
@@ -137,11 +196,48 @@ createServer(async (request, response) => {
         return json(response, 201, { shop });
       }
 
+      const profileMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/profile$/);
+      if (profileMatch && request.method === "PATCH") {
+        const shopId = decodeURIComponent(profileMatch[1]);
+        if (!await canAccessShop(access, shopId)) return json(response, 403, { error: "Чужой магазин" });
+        const shop = await updateShopProfile(shopId, validateProfile(await readJson(request)));
+        return shop ? json(response, 200, { shop }) : json(response, 404, { error: "Магазин не найден" });
+      }
+
+      const staffMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/staff(?:\/([^/]+))?$/);
+      if (staffMatch) {
+        const shopId = decodeURIComponent(staffMatch[1]);
+        const staffId = staffMatch[2] ? decodeURIComponent(staffMatch[2]) : "";
+        if (!await canAccessShop(access, shopId)) return json(response, 403, { error: "Чужой магазин" });
+        if (request.method === "GET" && !staffId) return json(response, 200, { staff: await listStaff(shopId) });
+        if (request.method === "POST" && !staffId) return json(response, 201, { staff: await createStaff(shopId, validateStaff(await readJson(request))) });
+        if (request.method === "PATCH" && staffId) {
+          const input = await readJson(request);
+          const staff = await updateStaff(shopId, staffId, input.active !== false);
+          return staff ? json(response, 200, { staff }) : json(response, 404, { error: "Сотрудник не найден" });
+        }
+      }
+
+      const ordersMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/orders(?:\/([^/]+))?$/);
+      if (ordersMatch) {
+        const shopId = decodeURIComponent(ordersMatch[1]);
+        const orderId = ordersMatch[2] ? decodeURIComponent(ordersMatch[2]) : "";
+        if (!await canAccessShop(access, shopId)) return json(response, 403, { error: "Чужой магазин" });
+        if (request.method === "GET" && !orderId) return json(response, 200, { orders: await listOrders(shopId) });
+        if (request.method === "PATCH" && orderId) {
+          const input = await readJson(request);
+          const statuses = new Set(["new", "confirmed", "working", "ready", "completed"]);
+          if (!statuses.has(input.status)) return json(response, 400, { error: "Некорректный статус заказа" });
+          const order = await updateOrder(shopId, orderId, input);
+          return order ? json(response, 200, { order }) : json(response, 404, { error: "Заказ не найден" });
+        }
+      }
+
       const catalogMatch = path.match(/^\/api\/admin\/shops\/([^/]+)\/catalog(?:\/([^/]+))?$/);
       if (catalogMatch) {
         const shopId = decodeURIComponent(catalogMatch[1]);
         const bouquetId = catalogMatch[2] ? decodeURIComponent(catalogMatch[2]) : "";
-        if (access.role !== "superadmin" && access.shopId !== shopId) return json(response, 403, { error: "Чужой магазин" });
+        if (!await canAccessShop(access, shopId)) return json(response, 403, { error: "Чужой магазин" });
         if (request.method === "GET" && !bouquetId) return json(response, 200, { catalog: await listCatalog(shopId) });
         if (request.method === "POST" && !bouquetId) return json(response, 201, { bouquet: await createBouquet(shopId, validateBouquet(await readJson(request))) });
         if (request.method === "PATCH" && bouquetId) {
@@ -166,13 +262,14 @@ createServer(async (request, response) => {
   if (path === "/api/catalog" && request.method === "GET") {
     try {
       const shopId = process.env.SHOP_ID;
-      if (!databaseEnabled || !shopId) return json(response, 200, { catalog: demoBouquets });
+      if (!databaseEnabled || !shopId) return json(response, 200, { catalog: demoBouquets, addons: [] });
       await databaseReady;
       const shop = await getShop(shopId);
-      if (shop && !shop.enabled) return json(response, 200, { catalog: [] });
-      return json(response, 200, { catalog: await listCatalog(shopId, true) });
+      if (shop && !shop.enabled) return json(response, 200, { catalog: [], addons: [] });
+      const [catalog, addons] = await Promise.all([listCatalog(shopId, true, "bouquet"), listCatalog(shopId, true, "addon")]);
+      return json(response, 200, { catalog, addons });
     } catch {
-      return json(response, 200, { catalog: demoBouquets });
+      return json(response, 200, { catalog: demoBouquets, addons: [] });
     }
   }
 
@@ -293,10 +390,14 @@ async function startBot() {
 
         const callback = update.callback_query;
         if (!callback) continue;
+        let shopProfile = null;
+        if (databaseEnabled && process.env.SHOP_ID) {
+          try { await databaseReady; shopProfile = await getShop(process.env.SHOP_ID); } catch { /* Используем значения окружения. */ }
+        }
         const replies = {
-          contacts,
-          addresses,
-          about,
+          contacts: shopProfile ? [shopProfile.contactPhone, shopProfile.contactTelegram].filter(Boolean).join("\n") || contacts : contacts,
+          addresses: shopProfile ? [shopProfile.address, shopProfile.schedule, shopProfile.pickup, shopProfile.mapUrl].filter(Boolean).join("\n") || addresses : addresses,
+          about: shopProfile?.about || about,
           privacy: "Политика появится здесь после настройки публичного адреса приложения.",
           no_webapp: "Подбор почти готов. Публичный адрес приложения ещё не настроен."
         };

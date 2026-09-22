@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { availableBouquets, recommend } from "./recommender.js";
-import { adminSummary, readShops } from "./admin-data.js";
+import { adminSummary, findShopByBot, readShops } from "./admin-data.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
 
 test("подбор учитывает описание и бюджет", () => {
@@ -55,6 +55,20 @@ test("суперадмин считает только активную подп
     { id: "two", name: "Второй", subscription: "trial", monthly: 2900, botStatus: "setup", orders: 1 }
   ]));
   assert.deepEqual(adminSummary(shops), { shops: 2, online: 1, active: 1, attention: 0, mrr: 4900, orders: 4 });
+});
+
+test("кабинет магазина связывается с текущим ботом без учёта @ и регистра", () => {
+  const shops = [{ id: "test-shop", bot: "@Flower_F1ower_Bot" }];
+  assert.equal(findShopByBot(shops, "flower_f1ower_bot")?.id, "test-shop");
+  assert.equal(findShopByBot(shops, "another_bot"), null);
+});
+
+test("кабинет магазина содержит шесть рабочих разделов", () => {
+  const admin = readFileSync(new URL("./admin.html", import.meta.url), "utf8");
+  for (const section of ["orders", "catalog", "addons", "contacts", "team", "mailings"]) {
+    assert.ok(admin.includes(`data-tab="${section}"`));
+    assert.ok(admin.includes(`data-section="${section}"`));
+  }
 });
 
 test("админ определяется только по подписанным Telegram initData", () => {

@@ -6,6 +6,7 @@ const progressBar = document.querySelector("#progressBar");
 const state = { recipientType: "", occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
 let history = ["introScreen"];
 let catalog = bouquets;
+let shopAddons = [];
 
 const $ = (selector) => document.querySelector(selector);
 const occasionOptions = {
@@ -28,7 +29,11 @@ function renderOccasions(recipientType) {
 async function loadCatalog() {
   try {
     const response = await fetch("/api/catalog", { cache: "no-store" });
-    if (response.ok) catalog = (await response.json()).catalog;
+    if (response.ok) {
+      const data = await response.json();
+      catalog = data.catalog;
+      shopAddons = data.addons || [];
+    }
   } catch { /* Используем встроенный демо-каталог. */ }
   return catalog;
 }
@@ -204,6 +209,18 @@ function selectBouquet(id) {
       <img src="${state.selected.image}" alt="" />
       <div><h3>${state.selected.name}</h3><p>${state.selected.flowers}</p><strong>${formatPrice(state.selected.price)}</strong></div>
     </div>`;
+  if (shopAddons.length) {
+    const list = $("#addonList");
+    list.replaceChildren(...shopAddons.map((addon) => {
+      const label = document.createElement("label");
+      const text = document.createElement("span");
+      const name = document.createElement("b"); name.textContent = addon.name;
+      const description = document.createElement("small"); description.textContent = addon.flowers;
+      const price = document.createElement("em"); price.textContent = `+${formatPrice(addon.price)}`;
+      const input = document.createElement("input"); input.type = "checkbox"; input.value = addon.price; input.dataset.name = addon.name;
+      text.append(name, description); label.append(text, price, input); return label;
+    }));
+  }
   document.querySelectorAll("#addonList input").forEach((input) => { input.checked = false; });
   updateTotal();
   showScreen("orderScreen");

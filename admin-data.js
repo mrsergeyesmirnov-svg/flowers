@@ -39,3 +39,10 @@ export function adminSummary(shops) {
     orders: shops.reduce((sum, shop) => sum + shop.orders, 0)
   };
 }
+
+export function findShopByBot(shops, botUsername) {
+  const username = String(botUsername || "").trim().replace(/^@/, "").toLowerCase();
+  if (!username) return null;
+  const matches = shops.filter((shop) => String(shop.bot || "").trim().replace(/^@/, "").toLowerCase() === username);
+  return matches.length === 1 ? matches[0] : null;
+}

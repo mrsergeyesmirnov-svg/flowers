@@ -16,6 +16,7 @@
       </header>
 
       <div class="notice" id="databaseNotice" hidden>Для сохранения изменений подключите Postgres в Railway.</div>
+      <div class="notice" id="shopBindingNotice" hidden></div>
 
       <section id="overview">
         <div class="stats">
@@ -32,7 +33,7 @@
       </section>
 
       <section id="shopPanel" hidden>
-        <button class="back" id="backButton">← Все магазины</button>
+        <button class="back super-only" id="backButton">← Все магазины</button>
         <div class="shop-title"><div><p class="eyebrow" id="shopStatus"></p><h2 id="shopTitle"></h2><p id="shopBot"></p><div class="shop-id super-only"><code id="shopId"></code><button type="button" id="copyShopIdButton">Копировать SHOP_ID</button></div></div><button class="danger super-only" id="toggleShopButton"></button></div>
 
         <form class="panel super-only" id="shopForm">
@@ -48,8 +49,65 @@
           <button class="primary" type="submit">Сохранить магазин</button>
         </form>
 
-        <div class="section-head catalog-head"><div><h2>Ассортимент</h2><p id="catalogSummary"></p></div><button class="primary" id="addBouquetButton">+ Букет</button></div>
-        <div class="catalog-list" id="catalogList"></div>
+        <nav class="shop-tabs" aria-label="Разделы кабинета">
+          <button class="active" data-tab="orders">Заказы</button>
+          <button data-tab="catalog">Ассортимент</button>
+          <button data-tab="addons">Допродажи</button>
+          <button data-tab="contacts">Контакты и точки</button>
+          <button data-tab="team">Команда</button>
+          <button data-tab="mailings">Рассылки</button>
+        </nav>
+
+        <section class="shop-section active" data-section="orders">
+          <div class="section-head"><div><h2>Заказы</h2><p id="ordersSummary">Новые и текущие заказы</p></div></div>
+          <div class="status-filters" id="orderFilters">
+            <button class="active" data-status="">Все</button><button data-status="new">Новые</button><button data-status="confirmed">Подтверждены</button><button data-status="working">В работе</button><button data-status="ready">Готовы</button><button data-status="completed">Завершены</button>
+          </div>
+          <div class="order-list" id="ordersList"></div>
+        </section>
+
+        <section class="shop-section" data-section="catalog">
+          <div class="section-head catalog-head"><div><h2>Ассортимент</h2><p id="catalogSummary"></p></div><button class="primary" id="addBouquetButton">+ Букет</button></div>
+          <div class="catalog-list" id="catalogList"></div>
+        </section>
+
+        <section class="shop-section" data-section="addons">
+          <div class="section-head catalog-head"><div><h2>Допродажи</h2><p id="addonsSummary"></p></div><button class="primary" id="addAddonButton">+ Позиция</button></div>
+          <div class="catalog-list" id="addonsList"></div>
+        </section>
+
+        <section class="shop-section" data-section="contacts">
+          <form class="panel" id="profileForm">
+            <h3>Контакты и точка</h3>
+            <div class="form-grid">
+              <label>Телефон<input name="contactPhone" type="tel" maxlength="40" /></label>
+              <label>Telegram менеджера<input name="contactTelegram" maxlength="80" placeholder="@manager" /></label>
+              <label>Адрес<input name="address" maxlength="300" /></label>
+              <label>Ссылка на карты<input name="mapUrl" type="url" maxlength="1000" placeholder="https://yandex.ru/maps/..." /></label>
+              <label>График<input name="schedule" maxlength="200" placeholder="Ежедневно 09:00–21:00" /></label>
+              <label>Условия самовывоза<input name="pickup" maxlength="300" /></label>
+            </div>
+            <label>О магазине<textarea name="about" maxlength="1000"></textarea></label>
+            <button class="primary" type="submit">Сохранить контакты</button>
+          </form>
+        </section>
+
+        <section class="shop-section" data-section="team">
+          <div class="section-head"><div><h2>Команда</h2><p>Владельцы, менеджеры и флористы</p></div><button class="primary" id="addStaffButton">+ Сотрудник</button></div>
+          <div class="team-list" id="staffList"></div>
+        </section>
+
+        <section class="shop-section" data-section="mailings">
+          <form class="panel" id="mailingForm">
+            <h3>Новая рассылка</h3>
+            <p class="panel-note">Получателей с отдельным согласием на рекламу: <strong id="mailingRecipients">0</strong>. Без согласия сообщение не отправится.</p>
+            <div class="mailing-stats"><span>Отправлено <b>0</b></span><span>Ошибки <b>0</b></span><span>Отписались <b>0</b></span></div>
+            <label>Магазин-отправитель<input id="mailingSender" readonly /></label>
+            <label>Текст сообщения<textarea name="message" maxlength="1000" placeholder="Напишите акцию или новость магазина"></textarea></label>
+            <div class="mailing-preview" id="mailingPreview">Предпросмотр сообщения</div>
+            <button class="primary" type="submit" disabled>Отправить рассылку</button>
+          </form>
+        </section>
       </section>
 
       <p class="security-note">Токены ботов, Telegram ID и платёжные секреты намеренно не отображаются.</p>
@@ -72,13 +130,26 @@
       <form method="dialog" class="dialog-card" id="bouquetForm">
         <div class="dialog-head"><h2 id="bouquetDialogTitle">Букет</h2><button type="button" data-close="bouquetDialog">×</button></div>
         <input name="id" type="hidden" />
+        <input name="kind" type="hidden" value="bouquet" />
         <label>Название<input name="name" maxlength="120" required /></label>
-        <label>Состав<input name="flowers" maxlength="300" required /></label>
+        <label><span id="bouquetCompositionLabel">Состав</span><input name="flowers" maxlength="300" required /></label>
         <label>Описание<textarea name="description" maxlength="500"></textarea></label>
+        <label id="bouquetTagsLabel">Кому и к каким поводам подходит<input name="tags" maxlength="500" placeholder="мама, учитель, день рождения, благодарность" /></label>
         <label>Цена<input name="price" type="number" min="0" step="100" required /></label>
         <label>Ссылка на фотографию<input name="image" type="url" maxlength="1000" /></label>
         <label class="check"><input name="available" type="checkbox" checked /> В наличии</label>
         <button class="primary" type="submit">Сохранить букет</button>
+      </form>
+    </dialog>
+
+    <dialog id="staffDialog">
+      <form method="dialog" class="dialog-card" id="staffForm">
+        <div class="dialog-head"><h2>Добавить сотрудника</h2><button type="button" data-close="staffDialog">×</button></div>
+        <label>Имя<input name="name" maxlength="120" required /></label>
+        <label>Номер телефона<input name="phone" type="tel" maxlength="24" placeholder="+7 999 000-00-00" required /></label>
+        <label>Роль<select name="role"><option value="florist">Флорист</option><option value="manager">Менеджер</option><option value="owner">Владелец</option></select></label>
+        <p class="panel-note">После добавления сотрудник ещё не получит доступ. Подключение выполняется отдельным подтверждением в Telegram.</p>
+        <button class="primary" type="submit">Добавить</button>
       </form>
     </dialog>
 
