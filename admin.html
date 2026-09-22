@@ -2,36 +2,87 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#101b17" />
-    <title>Flowers · Super Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1512" />
+    <title>Flowers Admin</title>
     <link rel="stylesheet" href="/admin.css" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
     <main id="adminApp" hidden>
       <header>
-        <div><h1>Flowers <span id="roleTitle">Admin</span></h1><p>Магазины, подписки и состояние платформы</p></div>
-        <div class="badge" id="roleBadge">ПРОВЕРКА ДОСТУПА</div>
+        <div><p class="eyebrow" id="roleBadge">ADMIN</p><h1>Flowers <span id="roleTitle">Admin</span></h1></div>
+        <button class="ghost" id="refreshButton">Обновить</button>
       </header>
-      <div class="stats">
-        <div class="card"><span id="shopsLabel">Магазины</span><strong id="shopsCount">—</strong></div>
-        <div class="card"><span id="mrrLabel">MRR</span><strong id="mrr">—</strong></div>
-        <div class="card"><span id="activeLabel">Активные подписки</span><strong id="activeCount">—</strong></div>
-        <div class="card"><span>Заказы</span><strong id="ordersCount">—</strong></div>
-      </div>
-      <section>
-        <div class="section-head">
-          <div><h2>Подключённые магазины</h2><p id="summaryLine">Загрузка…</p></div>
+
+      <div class="notice" id="databaseNotice" hidden>Для сохранения изменений подключите Postgres в Railway.</div>
+
+      <section id="overview">
+        <div class="stats">
+          <article><span>Магазины</span><strong id="shopsCount">—</strong></article>
+          <article><span>MRR</span><strong id="mrr">—</strong></article>
+          <article><span>Активные</span><strong id="activeCount">—</strong></article>
+          <article><span>Заказы</span><strong id="ordersCount">—</strong></article>
         </div>
-        <table>
-          <thead><tr><th>Магазин</th><th>Бот</th><th>Тариф</th><th>Подписка</th><th>Оплачено до</th><th>Бот</th><th>Заказы</th></tr></thead>
-          <tbody id="shopsTable"></tbody>
-        </table>
-        <div class="empty" id="empty" hidden>Магазины ещё не подключены.</div>
+        <div class="section-head">
+          <div><h2>Магазины</h2><p id="summaryLine">Загрузка…</p></div>
+          <button class="primary super-only" id="addShopButton">+ Магазин</button>
+        </div>
+        <div class="shop-list" id="shopsList"></div>
       </section>
-      <p class="hint">Токены ботов и платёжные секреты здесь намеренно не показываются.</p>
+
+      <section id="shopPanel" hidden>
+        <button class="back" id="backButton">← Все магазины</button>
+        <div class="shop-title"><div><p class="eyebrow" id="shopStatus"></p><h2 id="shopTitle"></h2><p id="shopBot"></p></div><button class="danger super-only" id="toggleShopButton"></button></div>
+
+        <form class="panel super-only" id="shopForm">
+          <h3>Подписка и настройки</h3>
+          <div class="form-grid">
+            <label>Название<input name="name" maxlength="120" required /></label>
+            <label>Публичный @бот<input name="bot" maxlength="80" placeholder="@flowers_bot" /></label>
+            <label>Тариф<input name="plan" maxlength="40" required /></label>
+            <label>Цена в месяц<input name="monthly" type="number" min="0" step="100" required /></label>
+            <label>Статус<select name="subscription"><option value="trial">Пилот</option><option value="active">Активна</option><option value="overdue">Просрочена</option><option value="paused">Приостановлена</option></select></label>
+            <label>Оплачено до<input name="paidUntil" type="date" /></label>
+          </div>
+          <button class="primary" type="submit">Сохранить магазин</button>
+        </form>
+
+        <div class="section-head catalog-head"><div><h2>Ассортимент</h2><p id="catalogSummary"></p></div><button class="primary" id="addBouquetButton">+ Букет</button></div>
+        <div class="catalog-list" id="catalogList"></div>
+      </section>
+
+      <p class="security-note">Токены ботов, Telegram ID и платёжные секреты намеренно не отображаются.</p>
     </main>
+
+    <dialog id="shopDialog">
+      <form method="dialog" class="dialog-card" id="newShopForm">
+        <div class="dialog-head"><h2>Новый магазин</h2><button type="button" data-close="shopDialog">×</button></div>
+        <label>ID магазина<input name="id" pattern="[a-z0-9][a-z0-9-]{1,39}" placeholder="romashka" required /></label>
+        <label>Название<input name="name" required /></label>
+        <label>Публичный @бот<input name="bot" placeholder="@romashka_bot" /></label>
+        <div class="form-grid"><label>Тариф<input name="plan" value="Start" required /></label><label>Цена/мес<input name="monthly" type="number" min="0" value="4900" required /></label></div>
+        <label>Статус<select name="subscription"><option value="trial">Пилот</option><option value="active">Активна</option><option value="overdue">Просрочена</option><option value="paused">Приостановлена</option></select></label>
+        <label>Оплачено до<input name="paidUntil" type="date" /></label>
+        <button class="primary" type="submit">Подключить магазин</button>
+      </form>
+    </dialog>
+
+    <dialog id="bouquetDialog">
+      <form method="dialog" class="dialog-card" id="bouquetForm">
+        <div class="dialog-head"><h2 id="bouquetDialogTitle">Букет</h2><button type="button" data-close="bouquetDialog">×</button></div>
+        <input name="id" type="hidden" />
+        <label>Название<input name="name" maxlength="120" required /></label>
+        <label>Состав<input name="flowers" maxlength="300" required /></label>
+        <label>Описание<textarea name="description" maxlength="500"></textarea></label>
+        <label>Цена<input name="price" type="number" min="0" step="100" required /></label>
+        <label>Ссылка на фотографию<input name="image" type="url" maxlength="1000" /></label>
+        <label class="check"><input name="available" type="checkbox" checked /> В наличии</label>
+        <button class="primary" type="submit">Сохранить букет</button>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" hidden></div>
     <script type="module" src="/admin.js"></script>
   </body>
 </html>

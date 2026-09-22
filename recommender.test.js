@@ -30,6 +30,11 @@ test("запрет понимает разные формы названия ц�
   assert.ok(result.every((bouquet) => !/лили|хризантем/i.test(bouquet.flowers)));
 });
 
+test("подбор использует ассортимент магазина из базы", () => {
+  const catalog = [{ id: "only", name: "Тест", flowers: "Тюльпаны", description: "", price: 4000, image: "", tags: ["нежная"] }];
+  assert.equal(recommend({ description: "нежная", budget: 5000, catalog })[0].id, "only");
+});
+
 test("суперадмин считает только активную подписку в MRR", () => {
   const shops = readShops(JSON.stringify([
     { id: "one", name: "Первый", subscription: "active", monthly: 4900, botStatus: "online", orders: 3 },

@@ -1,12 +1,21 @@
-import { availableBouquets, formatPrice, recommend } from "./recommender.js";
+import { availableBouquets, bouquets, formatPrice, recommend } from "./recommender.js";
 
 const screens = [...document.querySelectorAll(".screen")];
 const backButton = document.querySelector("#backButton");
 const progressBar = document.querySelector("#progressBar");
 const state = { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
 let history = ["introScreen"];
+let catalog = bouquets;
 
 const $ = (selector) => document.querySelector(selector);
+
+async function loadCatalog() {
+  try {
+    const response = await fetch("/api/catalog", { cache: "no-store" });
+    if (response.ok) catalog = (await response.json()).catalog;
+  } catch { /* Используем встроенный демо-каталог. */ }
+  return catalog;
+}
 
 function showScreen(id, remember = true) {
   screens.forEach((screen) => screen.classList.toggle("active", screen.id === id));
@@ -122,10 +131,11 @@ function bouquetCard(bouquet, badge = "В наличии") {
     </article>`;
 }
 
-$("#showResults").addEventListener("click", () => {
+$("#showResults").addEventListener("click", async () => {
   state.recipientName = $("#recipientName").value.trim();
   state.avoid = $("#avoid").value.trim();
-  const matches = recommend(state);
+  await loadCatalog();
+  const matches = recommend({ ...state, catalog });
   const name = state.recipientName ? `для ${state.recipientName}` : "для неё";
   $("#resultsTitle").textContent = `Три букета ${name}`;
   $("#resultsReason").textContent = `Учли повод, описание и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Полностью исключили: ${state.avoid}.` : "."}`;
@@ -135,16 +145,16 @@ $("#showResults").addEventListener("click", () => {
 });
 
 $("#showCatalog").addEventListener("click", () => {
-  const catalog = availableBouquets(state);
+  const available = availableBouquets({ ...state, catalog });
   $("#catalogReason").textContent = state.avoid
-    ? `Показываем ${catalog.length} вариантов. В составах нет: ${state.avoid}.`
-    : `Сейчас в наличии ${catalog.length} вариантов.`;
-  $("#catalogList").innerHTML = catalog.map((bouquet) => bouquetCard(bouquet)).join("");
+    ? `Показываем ${available.length} вариантов. В составах нет: ${state.avoid}.`
+    : `Сейчас в наличии ${available.length} вариантов.`;
+  $("#catalogList").innerHTML = available.map((bouquet) => bouquetCard(bouquet)).join("");
   showScreen("catalogScreen");
 });
 
 function selectBouquet(id) {
-  state.selected = availableBouquets(state).find((bouquet) => bouquet.id === id);
+  state.selected = availableBouquets({ ...state, catalog }).find((bouquet) => bouquet.id === id);
   if (!state.selected) return;
   $("#selectedBouquet").innerHTML = `
     <div class="selected-mini">

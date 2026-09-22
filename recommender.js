@@ -95,18 +95,18 @@ export function excludedFlowerRoots(avoid = "") {
   return flowerRoots.filter((root) => words.includes(root));
 }
 
-export function availableBouquets({ avoid = "" } = {}) {
+export function availableBouquets({ avoid = "", catalog = bouquets } = {}) {
   const excluded = excludedFlowerRoots(avoid);
-  if (!excluded.length) return bouquets;
-  return bouquets.filter((bouquet) => {
+  if (!excluded.length) return catalog;
+  return catalog.filter((bouquet) => {
     const composition = normalize(bouquet.flowers);
     return excluded.every((root) => !composition.includes(root));
   });
 }
 
-export function recommend({ description = "", occasion = "", budget = 8000, avoid = "" }) {
+export function recommend({ description = "", occasion = "", budget = 8000, avoid = "", catalog = bouquets }) {
   const words = normalize(`${description} ${occasion}`);
-  return availableBouquets({ avoid })
+  return availableBouquets({ avoid, catalog })
     .map((bouquet) => ({
       ...bouquet,
       score:
