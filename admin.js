@@ -56,6 +56,7 @@ function renderShops() {
     button.type = "button";
     const content = element("div");
     content.append(element("h3", "", shop.name), element("p", "", `${shop.bot || "Бот не указан"} · ${shop.plan} · ${money(shop.monthly)}`));
+    if (state.role === "superadmin") content.append(element("code", "shop-card-id", `SHOP_ID=${shop.id}`));
     const pills = element("div", "pills");
     pills.append(statusPill(shop), element("span", "pill", `${shop.orders} заказов`));
     content.append(pills);
@@ -77,6 +78,7 @@ async function openShop(id) {
   $("#shopPanel").hidden = false;
   $("#shopTitle").textContent = state.current.name;
   $("#shopBot").textContent = `${state.current.bot || "Бот не указан"} · ${state.current.plan} · ${money(state.current.monthly)}`;
+  $("#shopId").textContent = `SHOP_ID=${state.current.id}`;
   $("#shopStatus").textContent = state.current.enabled ? labels[state.current.subscription] : "Отключён";
   $("#toggleShopButton").textContent = state.current.enabled ? "Приостановить" : "Подключить";
   fillShopForm(state.current);
@@ -136,6 +138,10 @@ else load().catch(() => { document.body.textContent = "Не удалось от�
 
 $("#refreshButton").addEventListener("click", () => location.reload());
 $("#backButton").addEventListener("click", () => { $("#shopPanel").hidden = true; $("#overview").hidden = false; });
+$("#copyShopIdButton").addEventListener("click", async () => {
+  await navigator.clipboard.writeText(state.current.id);
+  toast("SHOP_ID скопирован");
+});
 $("#addShopButton").addEventListener("click", () => $("#shopDialog").showModal());
 $("#addBouquetButton").addEventListener("click", () => showBouquetDialog());
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));

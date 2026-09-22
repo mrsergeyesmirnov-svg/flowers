@@ -29,6 +29,7 @@ h3 { margin-bottom:18px; }
 .shop-card { display:grid; grid-template-columns:1fr auto; gap:16px; padding:19px; text-align:left; }
 .shop-card h3 { margin:0 0 7px; font-size:19px; }
 .shop-card p { color:var(--muted); font-size:12px; }
+.shop-card-id { display:block; width:max-content; margin-top:10px; padding:6px 8px; border-radius:8px; color:var(--green); background:#0f1a16; font-size:11px; }
 .pills { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px; }
 .pill { padding:6px 9px; border-radius:999px; color:var(--green); background:#20372d; font-size:10px; font-weight:800; }
 .pill.warn { color:var(--yellow); background:#352f20; }
@@ -36,6 +37,9 @@ h3 { margin-bottom:18px; }
 .shop-card .arrow { align-self:center; color:var(--green); font-size:24px; }
 .back { margin-bottom:20px; }
 .shop-title { align-items:flex-start; margin-bottom:22px; }
+.shop-id { display:flex; align-items:center; gap:8px; margin-top:12px; }
+.shop-id code { padding:8px 10px; border-radius:9px; color:var(--green); background:#0f1a16; font-size:12px; }
+.shop-id button { padding:8px 10px; border:1px solid var(--line); border-radius:9px; color:var(--text); background:transparent; font-size:11px; }
 .panel { margin-bottom:28px; padding:20px; }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 label { display:block; margin-bottom:13px; color:var(--muted); font-size:12px; font-weight:700; }
