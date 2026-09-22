@@ -3,7 +3,7 @@ import { availableBouquets, bouquets, formatPrice, recommend } from "./recommend
 const screens = [...document.querySelectorAll(".screen")];
 const backButton = document.querySelector("#backButton");
 const progressBar = document.querySelector("#progressBar");
-const state = { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
+const state = { recipientType: "", occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
 let history = ["introScreen"];
 let catalog = bouquets;
 
@@ -23,9 +23,10 @@ function showScreen(id, remember = true) {
   backButton.classList.toggle("hidden", id === "introScreen" || id === "successScreen");
   const steps = {
     introScreen: 0,
-    occasionScreen: 25,
-    descriptionScreen: 50,
-    budgetScreen: 75,
+    recipientScreen: 20,
+    occasionScreen: 40,
+    descriptionScreen: 60,
+    budgetScreen: 80,
     detailsScreen: 100,
     resultsScreen: 100,
     catalogScreen: 100,
@@ -49,7 +50,7 @@ backButton.addEventListener("click", () => {
 });
 
 function reset() {
-  Object.assign(state, { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null });
+  Object.assign(state, { recipientType: "", occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null });
   $("#description").value = "";
   $("#budget").value = 8000;
   $("#budgetOutput").textContent = formatPrice(8000);
@@ -61,13 +62,14 @@ function reset() {
   $("#customSubmit").disabled = true;
   $("#privacyConsent").checked = false;
   $("#marketingConsent").checked = false;
-  $("#startButton").disabled = true;
+  $("#showResults").disabled = true;
   document.querySelectorAll(".selected, input[type=checkbox]:checked").forEach((element) => {
     element.classList.remove("selected");
     if (element.matches("input")) element.checked = false;
   });
   $("#occasionScreen .primary").disabled = true;
   $("#descriptionScreen .primary").disabled = true;
+  $("#recipientScreen .primary").disabled = true;
   history = ["introScreen"];
   showScreen("introScreen", false);
 }
@@ -76,8 +78,17 @@ $("#restartButton").addEventListener("click", reset);
 $("#againButton").addEventListener("click", reset);
 
 $("#privacyConsent").addEventListener("change", (event) => {
-  $("#startButton").disabled = !event.target.checked;
+  $("#showResults").disabled = !event.target.checked;
   state.privacyConsentAt = event.target.checked ? new Date().toISOString() : null;
+});
+
+$("#recipientChoices").addEventListener("click", (event) => {
+  const choice = event.target.closest(".choice");
+  if (!choice) return;
+  document.querySelectorAll("#recipientChoices .choice").forEach((item) => item.classList.remove("selected"));
+  choice.classList.add("selected");
+  state.recipientType = choice.dataset.value;
+  $("#recipientScreen .primary").disabled = false;
 });
 
 $("#marketingConsent").addEventListener("change", (event) => {
@@ -110,6 +121,21 @@ $("#descriptionChips").addEventListener("click", (event) => {
   syncDescription();
 });
 
+const descriptorPool = [
+  "нежный стиль", "яркий стиль", "минимализм", "творческий характер", "любит классику", "любит необычное",
+  "спокойный характер", "много энергии", "элегантный стиль", "романтичное настроение", "сдержанный стиль", "с чувством юмора",
+  "любит пастельные цвета", "ценит уют", "предпочитает натуральность", "следит за модой", "любит сюрпризы", "практичный"
+];
+
+function shuffleDescriptors() {
+  const shown = new Set([...$("#descriptionChips").children].map((item) => item.dataset.value));
+  const fresh = descriptorPool.filter((item) => !shown.has(item)).sort(() => Math.random() - .5).slice(0, 6);
+  const values = fresh.length === 6 ? fresh : [...descriptorPool].sort(() => Math.random() - .5).slice(0, 6);
+  $("#descriptionChips").innerHTML = values.map((value) => `<button data-value="${value}">${value}</button>`).join("");
+}
+
+$("#shuffleChips").addEventListener("click", shuffleDescriptors);
+
 $("#budget").addEventListener("input", (event) => {
   state.budget = Number(event.target.value);
   $("#budgetOutput").textContent = formatPrice(state.budget);
@@ -136,8 +162,8 @@ $("#showResults").addEventListener("click", async () => {
   state.avoid = $("#avoid").value.trim();
   await loadCatalog();
   const matches = recommend({ ...state, catalog });
-  const name = state.recipientName ? `для ${state.recipientName}` : "для неё";
-  $("#resultsTitle").textContent = `Три букета ${name}`;
+  const recipient = state.recipientName ? `для ${state.recipientName}` : `для получателя`;
+  $("#resultsTitle").textContent = `Три букета ${recipient}`;
   $("#resultsReason").textContent = `Учли повод, описание и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Полностью исключили: ${state.avoid}.` : "."}`;
   const badges = ["Лучшее совпадение", "Альтернатива", "Смелее"];
   $("#bouquetList").innerHTML = matches.map((bouquet, index) => bouquetCard(bouquet, badges[index])).join("");

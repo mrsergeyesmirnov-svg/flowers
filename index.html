@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f5f0e8" />
-    <title>Она — персональный флорист</title>
+    <title>Цветы — персональный флорист</title>
     <link rel="preconnect" href="https://images.unsplash.com" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -12,7 +12,7 @@
     <main class="app">
       <header class="topbar">
         <button class="icon-button hidden" id="backButton" aria-label="Назад">←</button>
-        <a class="brand" href="#" aria-label="На главную">она<span>цветы по человеку</span></a>
+        <a class="brand" href="#" aria-label="На главную">цветы<span>букет по человеку</span></a>
         <button class="icon-button" id="restartButton" aria-label="Начать заново">↻</button>
       </header>
 
@@ -22,27 +22,32 @@
         <div class="intro-visual" aria-hidden="true">
           <span class="petal petal-one"></span><span class="petal petal-two"></span>
           <span class="petal petal-three"></span><span class="petal petal-four"></span>
-          <span class="intro-mark">она</span>
+          <span class="intro-mark">цветы</span>
         </div>
         <p class="eyebrow">Не каталог. Личный флорист.</p>
-        <h1>Букет, который похож именно на неё</h1>
+        <h1>Букет для особенного человека</h1>
         <p class="lead">Опиши человека и повод. За минуту предложим три живых букета из наличия.</p>
-        <div class="consent-stack">
-          <label class="consent-card compact">
-            <input id="privacyConsent" type="checkbox" />
-            <span><b>Согласен на обработку данных</b><small>Для подбора букета и оформления заявки. <a href="/privacy" target="_blank" rel="noopener">Политика конфиденциальности</a></small></span>
-          </label>
-          <label class="consent-card compact optional">
-            <input id="marketingConsent" type="checkbox" />
-            <span><b>Хочу получать акции и новинки</b><small>Необязательно. От рассылки можно отказаться в любой момент.</small></span>
-          </label>
+        <button class="primary" id="startButton" data-next="recipientScreen">Подобрать букет <span>→</span></button>
+        <p class="microcopy">Без регистрации · займёт около минуты</p>
+      </section>
+
+      <section class="screen" id="recipientScreen">
+        <p class="step-label">01 / 05</p>
+        <h2>Для кого букет?</h2>
+        <p class="subhead">Так мы точнее подберём настроение и подачу.</p>
+        <div class="choice-grid" id="recipientChoices">
+          <button class="choice" data-value="девушка"><span>♥</span>Девушке</button>
+          <button class="choice" data-value="мама"><span>☀</span>Маме</button>
+          <button class="choice" data-value="учитель"><span>✎</span>Учителю</button>
+          <button class="choice" data-value="школа"><span>🎓</span>В школу</button>
+          <button class="choice" data-value="коллега"><span>✦</span>Коллеге</button>
+          <button class="choice" data-value="другой человек"><span>🌿</span>Другому человеку</button>
         </div>
-        <button class="primary" id="startButton" data-next="occasionScreen" disabled>Подобрать букет <span>→</span></button>
-        <p class="microcopy">Без регистрации · рекламное согласие необязательно</p>
+        <button class="primary" data-next="occasionScreen" disabled>Продолжить <span>→</span></button>
       </section>
 
       <section class="screen" id="occasionScreen">
-        <p class="step-label">01 / 04</p>
+        <p class="step-label">02 / 05</p>
         <h2>Что хочешь сказать букетом?</h2>
         <p class="subhead">Повод задаёт настроение, но не ограничивает выбор.</p>
         <div class="choice-grid" id="occasionChoices">
@@ -51,30 +56,32 @@
           <button class="choice" data-value="годовщина"><span>♥</span>Годовщина</button>
           <button class="choice" data-value="первая встреча"><span>☕</span>Первое свидание</button>
           <button class="choice" data-value="извинение"><span>🕊</span>Помириться</button>
-          <button class="choice" data-value="мама"><span>☀</span>Для мамы</button>
+          <button class="choice" data-value="благодарность"><span>🌿</span>Поблагодарить</button>
         </div>
         <button class="primary" data-next="descriptionScreen" disabled>Продолжить <span>→</span></button>
       </section>
 
       <section class="screen" id="descriptionScreen">
-        <p class="step-label">02 / 04</p>
-        <h2>Какая она?</h2>
+        <p class="step-label">03 / 05</p>
+        <h2>Какой это человек?</h2>
         <p class="subhead">Пиши как другу. Хватит пары деталей: стиль, характер, любимые цвета.</p>
+        <p class="privacy-hint">Не указывай телефон, адрес, сведения о здоровье и другие личные подробности.</p>
         <label class="text-card">
           <span>Например</span>
-          <textarea id="description" maxlength="240" placeholder="Носит светлые вещи, любит минимализм и уют. Спокойная, но с характером..."></textarea>
+          <textarea id="description" maxlength="240" placeholder="Носит светлые вещи, любит минимализм и уют. Спокойный характер, ценит детали..."></textarea>
           <small><b id="charCount">0</b> / 240</small>
         </label>
         <div class="chips" id="descriptionChips">
-          <button data-value="нежная">нежная</button><button data-value="яркая">яркая</button>
-          <button data-value="минимализм">минимализм</button><button data-value="творческая">творческая</button>
+          <button data-value="нежная">нежный стиль</button><button data-value="яркая">яркий стиль</button>
+          <button data-value="минимализм">минимализм</button><button data-value="творческая">творческий характер</button>
           <button data-value="классика">любит классику</button><button data-value="необычная">любит необычное</button>
         </div>
+        <button class="shuffle" id="shuffleChips" type="button" aria-label="Показать другие подсказки">↻ Перемешать подсказки</button>
         <button class="primary" data-next="budgetScreen" disabled>Продолжить <span>→</span></button>
       </section>
 
       <section class="screen" id="budgetScreen">
-        <p class="step-label">03 / 04</p>
+        <p class="step-label">04 / 05</p>
         <h2>Какой бюджет комфортен?</h2>
         <p class="subhead">Покажем варианты рядом с суммой. Финальная цена останется под контролем.</p>
         <div class="budget-card">
@@ -86,19 +93,30 @@
       </section>
 
       <section class="screen" id="detailsScreen">
-        <p class="step-label">04 / 04</p>
+        <p class="step-label">05 / 05</p>
         <h2>Последний штрих</h2>
         <p class="subhead">Это поможет флористу сделать подбор точнее.</p>
         <div class="field-stack">
-          <label>Как её зовут?<input id="recipientName" type="text" maxlength="40" placeholder="Полина" /></label>
-          <label>Есть цветы, которые точно не любит?<input id="avoid" type="text" maxlength="80" placeholder="Например, лилии" /></label>
+          <label>Как зовут получателя? <small>(необязательно)</small><input id="recipientName" type="text" maxlength="40" placeholder="Например, Полина" /></label>
+          <label>Какие цветы точно не подходят?<input id="avoid" type="text" maxlength="80" placeholder="Например, без роз и лилий" /></label>
         </div>
-        <button class="primary" id="showResults">Показать подборку <span>✦</span></button>
+        <div class="consent-stack">
+          <label class="consent-card compact">
+            <input id="privacyConsent" type="checkbox" />
+            <span><b>Согласен на обработку персональных данных</b><small>Для подбора и оформления заявки. <a href="/privacy#consent-data" target="_blank" rel="noopener">Текст согласия</a> и <a href="/privacy" target="_blank" rel="noopener">политика</a>.</small></span>
+          </label>
+          <label class="consent-card compact optional">
+            <input id="marketingConsent" type="checkbox" />
+            <span><b>Хочу получать акции и новинки</b><small>Отдельное добровольное <a href="/privacy#consent-marketing" target="_blank" rel="noopener">согласие на рекламу</a>. Можно отозвать в любой момент.</small></span>
+          </label>
+        </div>
+        <button class="primary" id="showResults" disabled>Показать подборку <span>✦</span></button>
+        <p class="microcopy">Рекламное согласие необязательно</p>
       </section>
 
       <section class="screen results" id="resultsScreen">
         <p class="eyebrow">Подборка готова</p>
-        <h2 id="resultsTitle">Три букета для неё</h2>
+        <h2 id="resultsTitle">Три подходящих букета</h2>
         <p class="subhead" id="resultsReason"></p>
         <div class="bouquet-list" id="bouquetList"></div>
         <div class="own-choice">

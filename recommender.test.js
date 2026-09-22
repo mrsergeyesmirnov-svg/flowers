@@ -35,6 +35,11 @@ test("подбор использует ассортимент магазина 
   assert.equal(recommend({ description: "нежная", budget: 5000, catalog })[0].id, "only");
 });
 
+test("тип получателя влияет на подбор", () => {
+  assert.equal(recommend({ recipientType: "коллега", budget: 10000 })[0].id, "mono");
+  assert.ok(recommend({ recipientType: "учитель", budget: 5000 }).slice(0, 3).some((bouquet) => bouquet.tags.includes("учитель")));
+});
+
 test("суперадмин считает только активную подписку в MRR", () => {
   const shops = readShops(JSON.stringify([
     { id: "one", name: "Первый", subscription: "active", monthly: 4900, botStatus: "online", orders: 3 },

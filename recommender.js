@@ -6,7 +6,7 @@ export const bouquets = [
     description: "Воздушный и тактичный — выглядит дорого, но не кричит о себе.",
     price: 5900,
     image: "https://unsplash.com/photos/Iginxta1uqs/download?force=true&w=900",
-    tags: ["нежная", "спокойная", "минимализм", "светлый", "первая встреча", "без повода", "мама"]
+    tags: ["нежная", "спокойная", "минимализм", "светлый", "первая встреча", "без повода", "мама", "учитель", "благодарность"]
   },
   {
     id: "berry",
@@ -15,7 +15,7 @@ export const bouquets = [
     description: "Глубокие оттенки и выразительная форма — для человека, которого трудно не заметить.",
     price: 7900,
     image: "https://images.unsplash.com/photo-1519378058457-4c29a0a2efac?auto=format&fit=crop&w=900&q=85",
-    tags: ["яркая", "смелая", "вечеринка", "мода", "годовщина", "день рождения", "красный"]
+    tags: ["яркая", "смелая", "вечеринка", "мода", "годовщина", "день рождения", "красный", "девушка"]
   },
   {
     id: "garden",
@@ -24,7 +24,7 @@ export const bouquets = [
     description: "Свободная садовая сборка, будто цветы только что принесли с летней веранды.",
     price: 6900,
     image: "https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=900&q=85",
-    tags: ["творческая", "естественная", "уют", "природа", "необычная", "без повода", "день рождения"]
+    tags: ["творческая", "естественная", "уют", "природа", "необычная", "без повода", "день рождения", "девушка"]
   },
   {
     id: "peach",
@@ -51,7 +51,7 @@ export const bouquets = [
     description: "Лёгкий и жизнерадостный букет с мягкой полевой фактурой.",
     price: 4500,
     image: "https://unsplash.com/photos/hcH4yj7atVM/download?force=true&w=900",
-    tags: ["весёлая", "тёплая", "естественная", "забота", "мама", "без повода", "жёлтый"]
+    tags: ["весёлая", "тёплая", "естественная", "забота", "мама", "без повода", "жёлтый", "учитель", "школа", "благодарность"]
   },
   {
     id: "meadow",
@@ -60,7 +60,7 @@ export const bouquets = [
     description: "Нарочито свободная сборка для тех, кто любит простоту и живые детали.",
     price: 3900,
     image: "https://unsplash.com/photos/zjZkslZn9V8/download?force=true&w=900",
-    tags: ["творческая", "естественная", "уют", "природа", "без повода", "первая встреча", "светлый"]
+    tags: ["творческая", "естественная", "уют", "природа", "без повода", "первая встреча", "светлый", "школа"]
   },
   {
     id: "white",
@@ -69,7 +69,7 @@ export const bouquets = [
     description: "Спокойная светлая композиция — аккуратная, свежая и универсальная.",
     price: 5200,
     image: "https://unsplash.com/photos/cDihILxrdYw/download?force=true&w=900",
-    tags: ["нежная", "спокойная", "минимализм", "светлый", "мама", "коллега", "извинение"]
+    tags: ["нежная", "спокойная", "минимализм", "светлый", "мама", "коллега", "учитель", "школа", "извинение", "благодарность"]
   },
   {
     id: "rose",
@@ -78,7 +78,7 @@ export const bouquets = [
     description: "Уверенная классика без лишних объяснений — для большого романтического жеста.",
     price: 11900,
     image: "https://unsplash.com/photos/N-SDwTIagr4/download?force=true&w=900",
-    tags: ["романтичная", "классика", "любовь", "годовщина", "предложение", "красный"]
+    tags: ["романтичная", "классика", "любовь", "годовщина", "предложение", "красный", "девушка"]
   }
 ];
 
@@ -104,8 +104,8 @@ export function availableBouquets({ avoid = "", catalog = bouquets } = {}) {
   });
 }
 
-export function recommend({ description = "", occasion = "", budget = 8000, avoid = "", catalog = bouquets }) {
-  const words = normalize(`${description} ${occasion}`);
+export function recommend({ recipientType = "", description = "", occasion = "", budget = 8000, avoid = "", catalog = bouquets }) {
+  const words = normalize(`${recipientType} ${description} ${occasion}`);
   return availableBouquets({ avoid, catalog })
     .map((bouquet) => ({
       ...bouquet,
