@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { availableBouquets, recommend } from "./recommender.js";
+import { adminSummary, readShops } from "./admin-data.js";
+import { validateTelegramInitData } from "./telegram-auth.js";
 
 test("подбор учитывает описание и бюджет", () => {
   const [first] = recommend({ description: "она нежная, любит минимализм", occasion: "первая встреча", budget: 6000 });
@@ -25,4 +28,25 @@ test("явный запрет полностью исключает цветок
 test("запрет понимает разные формы названия цветка", () => {
   const result = recommend({ avoid: "без лилий и хризантем", budget: 8000 });
   assert.ok(result.every((bouquet) => !/лили|хризантем/i.test(bouquet.flowers)));
+});
+
+test("суперадмин считает только активную подписку в MRR", () => {
+  const shops = readShops(JSON.stringify([
+    { id: "one", name: "Первый", subscription: "active", monthly: 4900, botStatus: "online", orders: 3 },
+    { id: "two", name: "Второй", subscription: "trial", monthly: 2900, botStatus: "setup", orders: 1 }
+  ]));
+  assert.deepEqual(adminSummary(shops), { shops: 2, online: 1, active: 1, attention: 0, mrr: 4900, orders: 4 });
+});
+
+test("админ определяется только по подписанным Telegram initData", () => {
+  const token = "test-token";
+  const now = 1_800_000_000;
+  const params = new URLSearchParams({ auth_date: String(now), query_id: "test", user: JSON.stringify({ id: 123456789, first_name: "Admin" }) });
+  const check = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${key}=${value}`).join("\n");
+  const secret = createHmac("sha256", "WebAppData").update(token).digest();
+  params.set("hash", createHmac("sha256", secret).update(check).digest("hex"));
+
+  assert.equal(validateTelegramInitData(params.toString(), token, { now })?.userId, "123456789");
+  params.set("user", JSON.stringify({ id: 999 }));
+  assert.equal(validateTelegramInitData(params.toString(), token, { now }), null);
 });

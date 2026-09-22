@@ -3,7 +3,7 @@ import { availableBouquets, formatPrice, recommend } from "./recommender.js";
 const screens = [...document.querySelectorAll(".screen")];
 const backButton = document.querySelector("#backButton");
 const progressBar = document.querySelector("#progressBar");
-const state = { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null };
+const state = { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
 let history = ["introScreen"];
 
 const $ = (selector) => document.querySelector(selector);
@@ -40,7 +40,7 @@ backButton.addEventListener("click", () => {
 });
 
 function reset() {
-  Object.assign(state, { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null });
+  Object.assign(state, { occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null });
   $("#description").value = "";
   $("#budget").value = 8000;
   $("#budgetOutput").textContent = formatPrice(8000);
@@ -50,6 +50,9 @@ function reset() {
   $("#customRequest").value = "";
   $("#floristConsent").checked = false;
   $("#customSubmit").disabled = true;
+  $("#privacyConsent").checked = false;
+  $("#marketingConsent").checked = false;
+  $("#startButton").disabled = true;
   document.querySelectorAll(".selected, input[type=checkbox]:checked").forEach((element) => {
     element.classList.remove("selected");
     if (element.matches("input")) element.checked = false;
@@ -62,6 +65,15 @@ function reset() {
 
 $("#restartButton").addEventListener("click", reset);
 $("#againButton").addEventListener("click", reset);
+
+$("#privacyConsent").addEventListener("change", (event) => {
+  $("#startButton").disabled = !event.target.checked;
+  state.privacyConsentAt = event.target.checked ? new Date().toISOString() : null;
+});
+
+$("#marketingConsent").addEventListener("change", (event) => {
+  state.marketingConsentAt = event.target.checked ? new Date().toISOString() : null;
+});
 
 $("#occasionChoices").addEventListener("click", (event) => {
   const choice = event.target.closest(".choice");

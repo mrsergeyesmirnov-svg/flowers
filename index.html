@@ -27,8 +27,18 @@
         <p class="eyebrow">Не каталог. Личный флорист.</p>
         <h1>Букет, который похож именно на неё</h1>
         <p class="lead">Опиши человека и повод. За минуту предложим три живых букета из наличия.</p>
-        <button class="primary" data-next="occasionScreen">Подобрать букет <span>→</span></button>
-        <p class="microcopy">Без регистрации · займёт около минуты</p>
+        <div class="consent-stack">
+          <label class="consent-card compact">
+            <input id="privacyConsent" type="checkbox" />
+            <span><b>Согласен на обработку данных</b><small>Для подбора букета и оформления заявки. <a href="/privacy" target="_blank" rel="noopener">Политика конфиденциальности</a></small></span>
+          </label>
+          <label class="consent-card compact optional">
+            <input id="marketingConsent" type="checkbox" />
+            <span><b>Хочу получать акции и новинки</b><small>Необязательно. От рассылки можно отказаться в любой момент.</small></span>
+          </label>
+        </div>
+        <button class="primary" id="startButton" data-next="occasionScreen" disabled>Подобрать букет <span>→</span></button>
+        <p class="microcopy">Без регистрации · рекламное согласие необязательно</p>
       </section>
 
       <section class="screen" id="occasionScreen">
@@ -117,7 +127,7 @@
         </label>
         <label class="consent-card">
           <input id="floristConsent" type="checkbox" />
-          <span><b>Согласен на связь с флористом</b><small>Флорист получит этот запрос и напишет мне в Telegram с личным разбором и вариантами.</small></span>
+          <span><b>Согласен на связь с флористом</b><small>Флорист получит этот запрос и напишет мне в Telegram с личным разбором и вариантами. Это не согласие на рекламу.</small></span>
         </label>
         <button class="primary" id="customSubmit" disabled>Отправить флористу <span>→</span></button>
         <p class="microcopy">Демо: запрос не будет отправлен</p>

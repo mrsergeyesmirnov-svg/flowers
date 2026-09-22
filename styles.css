@@ -112,6 +112,10 @@ textarea::placeholder { color: #a8aca6; }
 .consent-card b, .consent-card small { display: block; }
 .consent-card b { margin-bottom: 5px; font-size: 13px; }
 .consent-card small { color: var(--muted); font-size: 11px; line-height: 1.45; }
+.consent-stack { display: grid; gap: 8px; margin-bottom: 14px; }
+.consent-card.compact { margin: 0; padding: 13px 14px; }
+.consent-card.optional { background: transparent; }
+.consent-card a { color: var(--green); font-weight: 700; }
 
 .selected-mini { display: grid; grid-template-columns: 90px 1fr; gap: 14px; margin: 24px 0; padding: 12px; border-radius: 20px; background: var(--paper); }
 .selected-mini img { width: 90px; height: 90px; border-radius: 14px; object-fit: cover; }
