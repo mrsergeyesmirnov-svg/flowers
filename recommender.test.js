@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { availableBouquets, recommend } from "./recommender.js";
+import { availableBouquets, bouquets, recommend } from "./recommender.js";
 import { adminSummary, findShopByBot, readShops } from "./admin-data.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
 
@@ -41,6 +41,19 @@ test("тип получателя влияет на подбор", () => {
   assert.ok(recommend({ recipientType: "учитель", budget: 5000 }).slice(0, 3).some((bouquet) => bouquet.tags.includes("учитель")));
 });
 
+test("отдельное описание желаемого букета имеет повышенный вес", () => {
+  assert.equal(recommend({ bouquetDescription: "классический пышный монобукет", budget: 12000 })[0].id, "rose");
+});
+
+test("запрет внутри описания букета исключает неподходящий состав", () => {
+  const result = recommend({ bouquetDescription: "светлый воздушный букет без роз", budget: 9000 });
+  assert.ok(result.every((bouquet) => !bouquet.flowers.toLowerCase().includes("роз")));
+});
+
+test("демо-каталог использует фотографии букетов из закреплённых источников", () => {
+  assert.ok(bouquets.every((bouquet) => /^https:\/\/unsplash\.com\/photos\/[\w-]+\/download\?/.test(bouquet.image)));
+});
+
 test("учителю не предлагается романтический повод", () => {
   const app = readFileSync(new URL("./app.js", import.meta.url), "utf8");
   const teacherOptions = app.match(/"учитель": \[(.*?)\],\n  "школа"/s)?.[1] || "";
@@ -69,6 +82,22 @@ test("кабинет магазина содержит шесть рабочих
     assert.ok(admin.includes(`data-tab="${section}"`));
     assert.ok(admin.includes(`data-section="${section}"`));
   }
+});
+
+test("пользователь может выбрать подбор по человеку или по букету", () => {
+  const page = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  assert.ok(page.includes('data-value="person"'));
+  assert.ok(page.includes('data-value="bouquet"'));
+  assert.ok(page.includes('id="bouquetDescriptionScreen"'));
+  assert.ok(app.includes("selectedDescriptors[type]"));
+});
+
+test("админка использует синюю палитру лендинга", () => {
+  const styles = readFileSync(new URL("./admin.css", import.meta.url), "utf8");
+  assert.ok(styles.includes("--blue:#3346ca"));
+  assert.ok(!styles.includes("--green"));
+  assert.ok(!styles.includes("#72d5a9"));
 });
 
 test("допродажи защищены от дублей, а фотографии загружаются файлом", () => {

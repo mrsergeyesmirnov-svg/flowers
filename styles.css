@@ -70,12 +70,17 @@ h3 { margin: 28px 0 12px; font-size: 17px; }
 .choice { min-height: 108px; padding: 17px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.58); text-align: left; cursor: pointer; }
 .choice span { display: block; margin-bottom: 20px; font-size: 22px; }
 .choice.selected { border-color: var(--green); background: var(--sage); box-shadow: inset 0 0 0 1px var(--green); }
+.method-grid .choice { min-height: 165px; }
+.method-grid .choice b, .method-grid .choice small { display: block; }
+.method-grid .choice b { margin-bottom: 7px; font-size: 16px; }
+.method-grid .choice small { color: var(--muted); font-size: 11px; line-height: 1.4; }
 
 .text-card { display: block; margin-bottom: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); }
 .text-card > span { color: var(--coral); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 textarea { width: 100%; min-height: 145px; resize: none; margin: 10px 0; padding: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 16px; line-height: 1.55; }
 textarea::placeholder { color: #a8aca6; }
 .text-card small { display: block; color: var(--muted); text-align: right; }
+.text-card.compact-text textarea { min-height: 82px; margin-bottom: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; }
 .chips button { padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.55); cursor: pointer; }
 .chips button.selected { color: white; border-color: var(--green); background: var(--green); }

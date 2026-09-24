@@ -3,7 +3,7 @@ import { availableBouquets, bouquets, formatPrice, recommend } from "./recommend
 const screens = [...document.querySelectorAll(".screen")];
 const backButton = document.querySelector("#backButton");
 const progressBar = document.querySelector("#progressBar");
-const state = { recipientType: "", occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
+const state = { mode: "", recipientType: "", occasion: "", personDescription: "", bouquetDescription: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null };
 let history = ["introScreen"];
 let catalog = bouquets;
 let shopAddons = [];
@@ -44,9 +44,11 @@ function showScreen(id, remember = true) {
   backButton.classList.toggle("hidden", id === "introScreen" || id === "successScreen");
   const steps = {
     introScreen: 0,
+    methodScreen: 0,
     recipientScreen: 20,
     occasionScreen: 40,
     descriptionScreen: 60,
+    bouquetDescriptionScreen: 60,
     budgetScreen: 80,
     detailsScreen: 100,
     resultsScreen: 100,
@@ -71,11 +73,14 @@ backButton.addEventListener("click", () => {
 });
 
 function reset() {
-  Object.assign(state, { recipientType: "", occasion: "", description: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null });
+  Object.assign(state, { mode: "", recipientType: "", occasion: "", personDescription: "", bouquetDescription: "", budget: 8000, recipientName: "", avoid: "", selected: null, privacyConsentAt: null, marketingConsentAt: null });
   $("#description").value = "";
+  $("#bouquetDescription").value = "";
+  $("#secondaryDescription").value = "";
   $("#budget").value = 8000;
   $("#budgetOutput").textContent = formatPrice(8000);
   $("#charCount").textContent = "0";
+  $("#bouquetCharCount").textContent = "0";
   $("#recipientName").value = "";
   $("#avoid").value = "";
   $("#customRequest").value = "";
@@ -90,7 +95,15 @@ function reset() {
   });
   $("#occasionScreen .primary").disabled = true;
   $("#descriptionScreen .primary").disabled = true;
+  $("#bouquetDescriptionScreen .primary").disabled = true;
   $("#recipientScreen .primary").disabled = true;
+  $("#methodScreen .primary").disabled = true;
+  selectedDescriptors.person.clear();
+  selectedDescriptors.bouquet.clear();
+  descriptorSuggestions.person = personDescriptorPool.slice(0, 6);
+  descriptorSuggestions.bouquet = bouquetDescriptorPool.slice(0, 6);
+  renderDescriptorChips("person");
+  renderDescriptorChips("bouquet");
   history = ["introScreen"];
   showScreen("introScreen", false);
 }
@@ -117,6 +130,21 @@ $("#marketingConsent").addEventListener("change", (event) => {
   state.marketingConsentAt = event.target.checked ? new Date().toISOString() : null;
 });
 
+$("#methodChoices").addEventListener("click", (event) => {
+  const choice = event.target.closest(".choice");
+  if (!choice) return;
+  if (state.mode && state.mode !== choice.dataset.value) $("#secondaryDescription").value = "";
+  document.querySelectorAll("#methodChoices .choice").forEach((item) => item.classList.remove("selected"));
+  choice.classList.add("selected");
+  state.mode = choice.dataset.value;
+  $("#methodScreen .primary").disabled = false;
+  const bouquetFirst = state.mode === "bouquet";
+  $("#secondaryDescriptionLabel").textContent = bouquetFirst ? "Хотите немного рассказать о получателе? Необязательно" : "Есть пожелания к самому букету? Необязательно";
+  $("#secondaryDescription").placeholder = bouquetFirst
+    ? "Например: спокойный человек, ценит минимализм и детали..."
+    : "Например: светлый, воздушный, побольше зелени...";
+});
+
 $("#occasionChoices").addEventListener("click", (event) => {
   const choice = event.target.closest(".choice");
   if (!choice) return;
@@ -126,37 +154,73 @@ $("#occasionChoices").addEventListener("click", (event) => {
   $("#occasionScreen .primary").disabled = false;
 });
 
-function syncDescription() {
-  state.description = $("#description").value.trim();
-  $("#charCount").textContent = $("#description").value.length;
-  $("#descriptionScreen .primary").disabled = state.description.length < 5;
+$("#occasionNext").addEventListener("click", () => showScreen(state.mode === "bouquet" ? "bouquetDescriptionScreen" : "descriptionScreen"));
+
+const personDescriptorPool = [
+  ["нежный стиль", "нежная"], ["яркий стиль", "яркая"], ["минимализм", "минимализм"],
+  ["творческий характер", "творческая"], ["любит классику", "классика"], ["любит необычное", "необычная"],
+  ["спокойный характер", "спокойная"], ["много энергии", "много энергии яркая"], ["элегантный стиль", "стильная"],
+  ["романтичное настроение", "романтичная"], ["сдержанный стиль", "деловая"], ["с чувством юмора", "весёлая"],
+  ["любит пастельные цвета", "пастель"], ["ценит уют", "уют"], ["предпочитает натуральность", "естественная"],
+  ["следит за модой", "мода"], ["любит сюрпризы", "любит сюрпризы необычная"], ["практичный человек", "практичный минимализм"]
+];
+const bouquetDescriptorPool = [
+  ["нежный", "нежная"], ["яркий", "яркая"], ["светлый", "светлый"], ["минималистичный", "минимализм"],
+  ["пышный", "пышный"], ["необычный", "необычная"], ["монобукет", "монобукет"], ["много зелени", "зелень"],
+  ["пастельные оттенки", "пастель"], ["бело-зелёный", "бело-зелёный"], ["натуральный", "естественная"],
+  ["романтичный", "романтичная"], ["классический", "классика"], ["современный", "современная"]
+];
+const selectedDescriptors = { person: new Set(), bouquet: new Set() };
+const descriptorSuggestions = { person: personDescriptorPool.slice(0, 6), bouquet: bouquetDescriptorPool.slice(0, 6) };
+
+function descriptorConfig(type) {
+  return type === "person"
+    ? { pool: personDescriptorPool, chips: "#descriptionChips", textarea: "#description", counter: "#charCount", screen: "#descriptionScreen", stateKey: "personDescription" }
+    : { pool: bouquetDescriptorPool, chips: "#bouquetDescriptionChips", textarea: "#bouquetDescription", counter: "#bouquetCharCount", screen: "#bouquetDescriptionScreen", stateKey: "bouquetDescription" };
 }
 
-$("#description").addEventListener("input", syncDescription);
-$("#descriptionChips").addEventListener("click", (event) => {
+function renderDescriptorChips(type) {
+  const { pool, chips } = descriptorConfig(type);
+  const selected = selectedDescriptors[type];
+  const options = [...pool.filter(([, value]) => selected.has(value)), ...descriptorSuggestions[type].filter(([, value]) => !selected.has(value))];
+  $(chips).innerHTML = options.map(([label, value]) => `<button class="${selected.has(value) ? "selected" : ""}" data-value="${value}">${label}</button>`).join("");
+}
+
+function syncDescription(type) {
+  const { textarea, counter, screen, stateKey } = descriptorConfig(type);
+  const written = $(textarea).value.trim();
+  state[stateKey] = [written, ...selectedDescriptors[type]].filter(Boolean).join(" · ");
+  $(counter).textContent = $(textarea).value.length;
+  $(`${screen} .primary`).disabled = written.length < 5 && selectedDescriptors[type].size === 0;
+}
+
+function toggleDescriptor(type, event) {
   const chip = event.target.closest("button");
   if (!chip) return;
-  chip.classList.toggle("selected");
-  const chosen = [...document.querySelectorAll("#descriptionChips .selected")].map((item) => item.dataset.value);
-  const original = $("#description").value.split(" · ")[0].trim();
-  $("#description").value = [original, ...chosen].filter(Boolean).join(" · ");
-  syncDescription();
-});
-
-const descriptorPool = [
-  "нежный стиль", "яркий стиль", "минимализм", "творческий характер", "любит классику", "любит необычное",
-  "спокойный характер", "много энергии", "элегантный стиль", "романтичное настроение", "сдержанный стиль", "с чувством юмора",
-  "любит пастельные цвета", "ценит уют", "предпочитает натуральность", "следит за модой", "любит сюрпризы", "практичный"
-];
-
-function shuffleDescriptors() {
-  const shown = new Set([...$("#descriptionChips").children].map((item) => item.dataset.value));
-  const fresh = descriptorPool.filter((item) => !shown.has(item)).sort(() => Math.random() - .5).slice(0, 6);
-  const values = fresh.length === 6 ? fresh : [...descriptorPool].sort(() => Math.random() - .5).slice(0, 6);
-  $("#descriptionChips").innerHTML = values.map((value) => `<button data-value="${value}">${value}</button>`).join("");
+  const selected = selectedDescriptors[type];
+  selected.has(chip.dataset.value) ? selected.delete(chip.dataset.value) : selected.add(chip.dataset.value);
+  renderDescriptorChips(type);
+  syncDescription(type);
 }
 
-$("#shuffleChips").addEventListener("click", shuffleDescriptors);
+function shuffleDescriptors(type) {
+  const { pool } = descriptorConfig(type);
+  const selected = selectedDescriptors[type];
+  const shown = new Set(descriptorSuggestions[type].map(([, value]) => value));
+  let fresh = pool.filter(([, value]) => !selected.has(value) && !shown.has(value));
+  if (fresh.length < 6) fresh = pool.filter(([, value]) => !selected.has(value));
+  descriptorSuggestions[type] = fresh.sort(() => Math.random() - .5).slice(0, 6);
+  renderDescriptorChips(type);
+}
+
+$("#description").addEventListener("input", () => syncDescription("person"));
+$("#bouquetDescription").addEventListener("input", () => syncDescription("bouquet"));
+$("#descriptionChips").addEventListener("click", (event) => toggleDescriptor("person", event));
+$("#bouquetDescriptionChips").addEventListener("click", (event) => toggleDescriptor("bouquet", event));
+$("#shuffleChips").addEventListener("click", () => shuffleDescriptors("person"));
+$("#shuffleBouquetChips").addEventListener("click", () => shuffleDescriptors("bouquet"));
+renderDescriptorChips("person");
+renderDescriptorChips("bouquet");
 
 $("#budget").addEventListener("input", (event) => {
   state.budget = Number(event.target.value);
@@ -182,11 +246,15 @@ function bouquetCard(bouquet, badge = "В наличии") {
 $("#showResults").addEventListener("click", async () => {
   state.recipientName = $("#recipientName").value.trim();
   state.avoid = $("#avoid").value.trim();
+  const secondaryDescription = $("#secondaryDescription").value.trim();
+  if (state.mode === "bouquet") state.personDescription = secondaryDescription;
+  else state.bouquetDescription = secondaryDescription;
   await loadCatalog();
   const matches = recommend({ ...state, catalog });
   const recipient = state.recipientName ? `для ${state.recipientName}` : `для получателя`;
   $("#resultsTitle").textContent = `Три букета ${recipient}`;
-  $("#resultsReason").textContent = `Учли повод, описание и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Полностью исключили: ${state.avoid}.` : "."}`;
+  const basis = state.mode === "bouquet" ? "пожелания к букету" : "характер получателя";
+  $("#resultsReason").textContent = `Учли ${basis}, повод и бюджет до ${formatPrice(state.budget)}${state.avoid ? `. Полностью исключили: ${state.avoid}.` : "."}`;
   const badges = ["Лучшее совпадение", "Альтернатива", "Смелее"];
   $("#bouquetList").innerHTML = matches.map((bouquet, index) => bouquetCard(bouquet, badges[index])).join("");
   showScreen("resultsScreen");

@@ -25,10 +25,21 @@
           <span class="intro-mark">цветы</span>
         </div>
         <p class="eyebrow">Не каталог. Личный флорист.</p>
-        <h1>Букет для особенного человека</h1>
-        <p class="lead">Опиши человека и повод. За минуту предложим три живых букета из наличия.</p>
-        <button class="primary" id="startButton" data-next="recipientScreen">Подобрать букет <span>→</span></button>
+        <h1>Букет, который попадёт в точку</h1>
+        <p class="lead">Опиши человека или желаемый букет. За минуту предложим три живых варианта из наличия.</p>
+        <button class="primary" id="startButton" data-next="methodScreen">Подобрать букет <span>→</span></button>
         <p class="microcopy">Без регистрации · займёт около минуты</p>
+      </section>
+
+      <section class="screen" id="methodScreen">
+        <p class="eyebrow">Способ подбора</p>
+        <h2>С чего начнём?</h2>
+        <p class="subhead">Можно оттолкнуться от человека или сразу описать желаемый результат.</p>
+        <div class="choice-grid method-grid" id="methodChoices">
+          <button class="choice" data-value="person"><span>♥</span><b>По человеку</b><small>Характер, стиль и повод</small></button>
+          <button class="choice" data-value="bouquet"><span>✦</span><b>По букету</b><small>Цвет, форма и настроение</small></button>
+        </div>
+        <button class="primary" data-next="recipientScreen" disabled>Продолжить <span>→</span></button>
       </section>
 
       <section class="screen" id="recipientScreen">
@@ -51,7 +62,7 @@
         <h2>Что хочешь сказать букетом?</h2>
         <p class="subhead">Повод задаёт настроение, но не ограничивает выбор.</p>
         <div class="choice-grid" id="occasionChoices"></div>
-        <button class="primary" data-next="descriptionScreen" disabled>Продолжить <span>→</span></button>
+        <button class="primary" id="occasionNext" disabled>Продолжить <span>→</span></button>
       </section>
 
       <section class="screen" id="descriptionScreen">
@@ -70,6 +81,20 @@
           <button data-value="классика">любит классику</button><button data-value="необычная">любит необычное</button>
         </div>
         <button class="shuffle" id="shuffleChips" type="button" aria-label="Показать другие подсказки">↻ Перемешать подсказки</button>
+        <button class="primary" data-next="budgetScreen" disabled>Продолжить <span>→</span></button>
+      </section>
+
+      <section class="screen" id="bouquetDescriptionScreen">
+        <p class="step-label">03 / 05</p>
+        <h2>Каким должен быть букет?</h2>
+        <p class="subhead">Опиши цвет, форму, настроение или желаемый эффект.</p>
+        <label class="text-card">
+          <span>Например</span>
+          <textarea id="bouquetDescription" maxlength="240" placeholder="Светлый, воздушный, не слишком круглый, с большим количеством зелени..."></textarea>
+          <small><b id="bouquetCharCount">0</b> / 240</small>
+        </label>
+        <div class="chips" id="bouquetDescriptionChips"></div>
+        <button class="shuffle" id="shuffleBouquetChips" type="button" aria-label="Показать другие подсказки">↻ Перемешать подсказки</button>
         <button class="primary" data-next="budgetScreen" disabled>Продолжить <span>→</span></button>
       </section>
 
@@ -93,6 +118,10 @@
           <label>Как зовут получателя? <small>(необязательно)</small><input id="recipientName" type="text" maxlength="40" placeholder="Например, Полина" /></label>
           <label>Какие цветы точно не подходят?<input id="avoid" type="text" maxlength="80" placeholder="Например, без роз и лилий" /></label>
         </div>
+        <label class="text-card compact-text">
+          <span id="secondaryDescriptionLabel">Есть пожелания к самому букету? Необязательно</span>
+          <textarea id="secondaryDescription" maxlength="240" placeholder="Например: светлый, воздушный, побольше зелени..."></textarea>
+        </label>
         <div class="consent-stack">
           <label class="consent-card compact">
             <input id="privacyConsent" type="checkbox" />

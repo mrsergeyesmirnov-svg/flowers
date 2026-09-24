@@ -103,6 +103,13 @@ export async function ensureDatabase() {
     for (const bouquet of demoBouquets) {
       await createBouquet(shopId, bouquet);
     }
+  } else {
+    for (const bouquet of demoBouquets) {
+      await pool.query(
+        "UPDATE bouquets SET image=$3 WHERE shop_id=$1 AND id=$2 AND image LIKE 'https://%unsplash.com/%'",
+        [shopId, bouquet.id, bouquet.image]
+      );
+    }
   }
 }
 
