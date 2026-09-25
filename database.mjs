@@ -76,6 +76,20 @@ export async function ensureDatabase() {
       content bytea NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS referral_leads (
+      id text PRIMARY KEY,
+      partner_code text NOT NULL,
+      telegram_user_id text NOT NULL UNIQUE,
+      username text NOT NULL DEFAULT '',
+      first_name text NOT NULL DEFAULT '',
+      status text NOT NULL DEFAULT 'new',
+      shop_name text NOT NULL DEFAULT '',
+      sale_amount integer NOT NULL DEFAULT 0 CHECK (sale_amount >= 0),
+      commission integer NOT NULL DEFAULT 5000 CHECK (commission >= 0),
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS referral_leads_partner_idx ON referral_leads(partner_code, created_at DESC);
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS contact_phone text NOT NULL DEFAULT '';
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS contact_telegram text NOT NULL DEFAULT '';
     ALTER TABLE shops ADD COLUMN IF NOT EXISTS address text NOT NULL DEFAULT '';
@@ -143,6 +157,19 @@ const mapBouquet = (row) => ({
   tags: row.tags,
   available: row.available,
   kind: row.kind || "bouquet"
+});
+
+const mapReferralLead = (row) => ({
+  id: row.id,
+  partnerCode: row.partner_code,
+  telegramUserId: row.telegram_user_id,
+  username: row.username,
+  firstName: row.first_name,
+  status: row.status,
+  shopName: row.shop_name,
+  saleAmount: row.sale_amount,
+  commission: row.commission,
+  createdAt: row.created_at
 });
 
 export async function listShops() {
@@ -267,6 +294,32 @@ export async function updateOrder(shopId, id, input) {
     [shopId, id, input.status, floristId]
   );
   return rows[0] || null;
+}
+
+export async function trackReferralLead(partnerCode, user) {
+  const { rows } = await pool.query(
+    `INSERT INTO referral_leads (id, partner_code, telegram_user_id, username, first_name)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (telegram_user_id) DO UPDATE SET
+       username=EXCLUDED.username, first_name=EXCLUDED.first_name
+     RETURNING *`,
+    [randomUUID(), partnerCode, String(user.id), user.username || "", user.first_name || ""]
+  );
+  return mapReferralLead(rows[0]);
+}
+
+export async function listReferralLeads() {
+  const { rows } = await pool.query("SELECT * FROM referral_leads ORDER BY created_at DESC");
+  return rows.map(mapReferralLead);
+}
+
+export async function updateReferralLead(id, input) {
+  const { rows } = await pool.query(
+    `UPDATE referral_leads SET status=$2, shop_name=$3, sale_amount=$4, commission=$5, updated_at=now()
+     WHERE id=$1 RETURNING *`,
+    [id, input.status, input.shopName, input.saleAmount, input.commission]
+  );
+  return rows[0] ? mapReferralLead(rows[0]) : null;
 }
 
 export async function saveMedia(shopId, mimeType, content) {
