@@ -1,8 +1,9 @@
 const labels = { trial:"Пилот", active:"Активна", overdue:"Просрочена", paused:"Приостановлена" };
 const orderLabels = { new:"Новый", confirmed:"Подтверждён", working:"В работе", ready:"Готов", completed:"Завершён" };
 const roleLabels = { owner:"Владелец", manager:"Менеджер", florist:"Флорист" };
+const referralLabels = { new:"Новый", contacted:"Связались", demo:"Посмотрел демо", proposal:"КП отправлено", paid:"Оплачено", rejected:"Отказ" };
 const telegram = window.Telegram?.WebApp;
-const state = { role:"", database:false, shops:[], current:null, catalog:[], staff:[], orders:[], orderFilter:"" };
+const state = { role:"", database:false, shops:[], referrals:[], referralPartners:[], current:null, catalog:[], staff:[], orders:[], orderFilter:"" };
 const $ = (selector) => document.querySelector(selector);
 const money = (value) => `${new Intl.NumberFormat("ru-RU").format(value)} ₽`;
 
@@ -61,6 +62,47 @@ function renderShops() {
     button.append(content, element("span", "arrow", "→"));
     button.addEventListener("click", () => openShop(shop.id));
     list.append(button);
+  });
+}
+
+function renderReferrals() {
+  const partner = state.referralPartners[0];
+  $("#partnerName").textContent = partner?.name || "Тёма";
+  $("#partnerLink").value = partner?.url || "Сначала укажите BOT_USERNAME";
+  const paid = state.referrals.filter((lead) => lead.status === "paid");
+  const payout = paid.reduce((sum, lead) => sum + lead.commission, 0);
+  $("#referralStats").replaceChildren(
+    element("span", "", `Переходы: ${state.referrals.length}`),
+    element("span", "", `Продажи: ${paid.length}`),
+    element("span", "", `К выплате: ${money(payout)}`)
+  );
+  const list = $("#referralList");
+  list.replaceChildren();
+  if (!state.referrals.length) return list.append(element("div", "empty-state", "Переходов по ссылке Тёмы пока нет."));
+  state.referrals.forEach((lead) => {
+    const card = element("article", "referral-card");
+    const title = lead.username ? `@${lead.username}` : lead.firstName || `Telegram ${lead.telegramUserId}`;
+    const info = element("div", "referral-person");
+    info.append(element("h3", "", title), element("p", "", `Источник: ${lead.partnerCode} · ${new Date(lead.createdAt).toLocaleDateString("ru-RU")}`));
+    const form = element("form", "referral-form");
+    const shop = Object.assign(element("input"), { name:"shopName", value:lead.shopName, placeholder:"Название магазина" });
+    const status = element("select"); status.name = "status";
+    for (const [value, label] of Object.entries(referralLabels)) status.append(Object.assign(element("option", "", label), { value, selected:value === lead.status }));
+    const amount = Object.assign(element("input"), { name:"saleAmount", type:"number", min:"0", step:"100", value:String(lead.saleAmount), placeholder:"Сумма продажи" });
+    const commission = Object.assign(element("input"), { name:"commission", type:"number", min:"0", step:"100", value:String(lead.commission), placeholder:"Комиссия" });
+    const save = Object.assign(element("button", "primary", "Сохранить"), { type:"submit" });
+    form.append(shop, status, amount, commission, save);
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const payload = Object.fromEntries(new FormData(form));
+        payload.saleAmount = Number(payload.saleAmount || 0); payload.commission = Number(payload.commission || 0);
+        const { lead: updated } = await api(`/api/admin/referrals/${encodeURIComponent(lead.id)}`, { method:"PATCH", body:JSON.stringify(payload) });
+        state.referrals = state.referrals.map((item) => item.id === updated.id ? updated : item);
+        renderReferrals(); toast("Лид обновлён");
+      } catch (error) { toast(error.message); }
+    });
+    card.append(info, form); list.append(card);
   });
 }
 
@@ -198,7 +240,7 @@ async function load() {
   $("#roleBadge").textContent = superAdmin ? "MEGA ADMIN" : "КАБИНЕТ МАГАЗИНА";
   $("#databaseNotice").hidden = state.database;
   $("#adminApp").hidden = false;
-  if (superAdmin) { updateDashboard(data.summary); renderShops(); return; }
+  if (superAdmin) { updateDashboard(data.summary); renderShops(); renderReferrals(); return; }
   $("#overview").hidden = true;
   if (state.shops[0]) await openShop(state.shops[0].id);
   else { $("#shopBindingNotice").textContent = data.shopBindingError || "Магазин не привязан"; $("#shopBindingNotice").hidden = false; }
@@ -223,6 +265,11 @@ $("#refreshButton").addEventListener("click", () => location.reload());
 $("#backButton").addEventListener("click", () => { $("#shopPanel").hidden = true; $("#overview").hidden = false; });
 $("#copyShopIdButton").addEventListener("click", async () => { await navigator.clipboard.writeText(state.current.id); toast("SHOP_ID скопирован"); });
 $("#addShopButton").addEventListener("click", () => $("#shopDialog").showModal());
+$("#copyPartnerLink").addEventListener("click", async () => {
+  const link = $("#partnerLink").value;
+  if (!link.startsWith("https://")) return toast("Ссылка пока недоступна");
+  await navigator.clipboard.writeText(link); toast("Ссылка Тёмы скопирована");
+});
 $("#addBouquetButton").addEventListener("click", () => showBouquetDialog(null, "bouquet"));
 $("#addAddonButton").addEventListener("click", () => showBouquetDialog(null, "addon"));
 $("#addStaffButton").addEventListener("click", () => { $("#staffForm").reset(); $("#staffDialog").showModal(); });
