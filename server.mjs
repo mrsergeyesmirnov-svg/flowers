@@ -6,9 +6,10 @@ import { bouquets as demoBouquets } from "./recommender.js";
 import { validateTelegramInitData } from "./telegram-auth.js";
 import {
   createBouquet, createShop, createStaff, databaseEnabled, ensureDatabase, getMedia, getShop,
-  listCatalog, listOrders, listShops, listStaff, updateBouquet, updateOrder, updateShop,
-  updateShopProfile, updateStaff, saveMedia
+  listCatalog, listOrders, listReferralLeads, listShops, listStaff, updateBouquet, updateOrder, updateReferralLead,
+  updateShop, updateShopProfile, updateStaff, saveMedia, trackReferralLead
 } from "./database.mjs";
+import { parseReferralCode } from "./referrals.js";
 
 const root = resolve(import.meta.dirname);
 const port = Number(process.env.PORT || 4173);
@@ -31,6 +32,7 @@ const databaseReady = ensureDatabase().catch((error) => {
   throw error;
 });
 let botUsernamePromise;
+const referralPartners = [{ code: "tema", name: "Тёма" }];
 const types = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -127,6 +129,17 @@ function validateStaff(input) {
   };
 }
 
+function validateReferralLead(input) {
+  const statuses = new Set(["new", "contacted", "demo", "proposal", "paid", "rejected"]);
+  if (!statuses.has(input.status)) throw Object.assign(new Error("Некорректный статус лида"), { status: 400 });
+  return {
+    status: input.status,
+    shopName: String(input.shopName || "").trim().slice(0, 120),
+    saleAmount: Math.max(0, Math.round(Number(input.saleAmount) || 0)),
+    commission: Math.max(0, Math.round(Number(input.commission) || 0))
+  };
+}
+
 function validateImage(dataUrl) {
   const match = String(dataUrl || "").match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
   if (!match) throw Object.assign(new Error("Поддерживаются JPG, PNG и WebP"), { status: 400 });
@@ -194,8 +207,16 @@ createServer(async (request, response) => {
 
       if (path === "/api/admin" && request.method === "GET") {
         const shops = await shopsFor(access);
+        const superAdmin = access.role === "superadmin";
+        const referrals = superAdmin && databaseEnabled ? await listReferralLeads() : [];
+        const username = superAdmin ? await currentBotUsername() : "";
         return json(response, 200, {
           role: access.role, database: databaseEnabled, summary: adminSummary(shops), shops,
+          referrals,
+          referralPartners: superAdmin ? referralPartners.map((partner) => ({
+            ...partner,
+            url: username ? `https://t.me/${username}?start=ref_${partner.code}` : ""
+          })) : [],
           shopBindingError: access.role === "shop_admin" && !shops.length
             ? "Магазин не привязан. Укажите правильный SHOP_ID в Railway или тот же @бот в карточке магазина."
             : ""
@@ -203,6 +224,13 @@ createServer(async (request, response) => {
       }
       if (!databaseEnabled) return json(response, 503, { error: "Подключите Postgres в Railway" });
       await databaseReady;
+
+      const referralMatch = path.match(/^\/api\/admin\/referrals\/([^/]+)$/);
+      if (referralMatch && request.method === "PATCH") {
+        if (access.role !== "superadmin") return json(response, 403, { error: "Только Super Admin" });
+        const lead = await updateReferralLead(decodeURIComponent(referralMatch[1]), validateReferralLead(await readJson(request)));
+        return lead ? json(response, 200, { lead }) : json(response, 404, { error: "Лид не найден" });
+      }
 
       if (path === "/api/admin/shops" && request.method === "POST") {
         if (access.role !== "superadmin") return json(response, 403, { error: "Только Super Admin" });
@@ -394,6 +422,11 @@ async function startBot() {
           continue;
         }
         if (message?.text?.startsWith("/start")) {
+          const referralCode = parseReferralCode(message.text);
+          if (referralCode && referralPartners.some((partner) => partner.code === referralCode) && databaseEnabled) {
+            try { await databaseReady; await trackReferralLead(referralCode, message.from); }
+            catch (error) { console.error("Referral tracking failed:", error.message); }
+          }
           if (databaseEnabled && process.env.SHOP_ID) {
             try {
               await databaseReady;
